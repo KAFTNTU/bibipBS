@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RoboControl Ultimate</title>
+    
+    <!-- Стилі та іконки -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Бібліотека Blockly -->
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    
+    <!-- Наш стиль для Scratch -->
+    <link rel="stylesheet" href="scratch/style.css">
+
+    <style>
+        body { overscroll-behavior: none; touch-action: none; user-select: none; font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: white; overflow: hidden; }
+        
+        .glass-header { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 50; }
+
+        /* Джойстик (Загальні стилі) */
+        .joy-container { position: relative; width: 280px; height: 280px; margin: 0 auto; transition: opacity 0.3s; }
+        .joy-base { width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 50%; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); position: relative; }
+        .joy-stick { position: absolute; width: 90px; height: 90px; background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 5px 15px rgba(0,0,0,0.7); pointer-events: none; z-index: 10; }
+        .joy-stick.snap { transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Кнопки Dual Mode */
+        .trig-btn-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
+        .trig-btn { width: 60px; height: 60px; border-radius: 50%; background: #334155; border: 2px solid #475569; color: #94a3b8; font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+        .trig-btn:active { background: #ef4444; border-color: #ef4444; color: white; transform: scale(0.95); }
+        .trig-val { margin-top: 4px; font-size: 10px; color: #94a3b8; font-family: monospace; background: #1e293b; padding: 2px 6px; border-radius: 4px; border: 1px solid #334155; cursor: pointer; }
+
+        /* Навігація */
+        .nav-btn { color: #64748b; padding: 8px 12px; border-radius: 8px; transition: all 0.2s; }
+        .nav-btn.active { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block; transition: all 0.3s;}
+        .connected { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        
+        #loaderOverlay { backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.8); transition: opacity 0.5s; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <!-- Лоадер -->
+    <div id="loaderOverlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center hidden opacity-0">
+        <div class="spinner mb-4"></div>
+        <div class="text-blue-400 font-bold tracking-widest text-sm animate-pulse">ЗАВАНТАЖЕННЯ...</div>
+    </div>
+
+    <!-- Хедер -->
+    <header class="h-16 glass-header flex items-center justify-between px-4 fixed top-0 w-full">
+        <div class="flex items-center gap-2">
+            <span id="statusDot" class="status-dot"></span>
+            <span id="statusText" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden sm:block">OFFLINE</span>
+        </div>
+        
+        <nav class="flex items-center gap-1 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50">
+            <button onclick="switchView('view-joystick', this)" class="nav-btn active"><i class="fa-solid fa-gamepad text-lg"></i></button>
+            <button onclick="switchView('view-builder', this)" class="nav-btn"><i class="fa-solid fa-puzzle-piece text-lg"></i></button>
+            <button onclick="startDualMode(this)" class="nav-btn text-purple-400 hover:text-purple-300"><i class="fa-solid fa-gamepad text-lg"></i><i class="fa-solid fa-gamepad text-lg -ml-2 text-purple-600"></i></button>
+            <div class="w-px h-6 bg-slate-700 mx-1"></div>
+            <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400"><i class="fa-solid fa-book text-lg"></i></button>
+        </nav>
+        
+        <button id="btConnect" class="w-10 h-10 rounded-full bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center transition-all border border-blue-400/30">
+            <i class="fa-brands fa-bluetooth-b text-lg"></i>
+        </button>
+    </header>
+
+    <!-- === ОСНОВНИЙ КОНТЕНТ === -->
+    <main class="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-950 pt-16">
+        
+        <!-- 1. ОДИН ДЖОЙСТИК -->
+        <section id="view-joystick" class="absolute inset-0 flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+            <div id="joystick-container" class="joy-container mb-6 w-[280px] h-[280px]">
+                <div id="joy1-base" class="joy-base">
+                    <div id="joy1-stick" class="joy-stick snap"></div>
+                </div>
+            </div>
+            
+            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 w-64">
+                <div class="flex justify-between px-2 mb-2">
+                    <div class="text-xs font-mono text-slate-400">X: <span id="sX" class="text-blue-400 font-bold text-lg">0</span></div>
+                    <div class="text-xs font-mono text-slate-400">Y: <span id="sY" class="text-blue-400 font-bold text-lg">0</span></div>
+                </div>
+                <div class="bg-black/40 p-1 rounded text-center border-t border-white/5">
+                    <span class="text-[10px] text-slate-500 font-bold mr-2">HEX:</span>
+                    <span id="singleHex" class="font-mono text-yellow-500 text-xs font-bold tracking-widest">00 00 0A</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. СКРЕТЧ (Blockly) -->
+        <section id="view-builder" class="absolute inset-0 flex flex-col hidden opacity-0 transition-opacity duration-300">
+            <div id="sensor-display-overlay">
+                <span class="sensor-label">S:</span>
+                <span id="sensorValDisplay" class="sensor-value">--</span>
+            </div>
+            <div id="blocklyDiv"></div>
+        </section>
+
+        <!-- 3. ДВА ДЖОЙСТИКИ (Dual) -->
+        <section id="view-dual" class="absolute inset-0 hidden opacity-0 flex flex-col">
+            <div class="h-8 bg-slate-900/50 flex justify-between items-center px-4 border-b border-white/5">
+                <span class="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Dual Mode</span>
+                <button onclick="openProtocolModal()" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-solid fa-gear"></i> Байты</button>
+            </div>
+            <div class="flex-1 flex items-center justify-around px-2 relative">
+                <!-- Left -->
+                <div class="flex flex-col items-center gap-6">
+                    <div class="trig-btn-wrapper">
+                        <button id="btnL" class="trig-btn" onmousedown="setBtn('L', 1)" onmouseup="setBtn('L', 0)" ontouchstart="setBtn('L', 1)" ontouchend="setBtn('L', 0)">L</button>
+                        <div class="trig-val" onclick="configBtn('L')">val: <span id="valDispL">1</span></div>
+                    </div>
+                    <div id="joyL-container" class="joy-container w-40 h-40">
+                        <div id="joyL-base" class="joy-base"><div id="joyL-stick" class="joy-stick snap w-14 h-14"></div></div>
+                    </div>
+                </div>
+                <!-- Right -->
+                <div class="flex flex-col items-center gap-6">
+                    <div class="trig-btn-wrapper">
+                        <button id="btnR" class="trig-btn" onmousedown="setBtn('R', 1)" onmouseup="setBtn('R', 0)" ontouchstart="setBtn('R', 1)" ontouchend="setBtn('R', 0)">R</button>
+                        <div class="trig-val" onclick="configBtn('R')">val: <span id="valDispR">1</span></div>
+                    </div>
+                    <div id="joyR-container" class="joy-container w-40 h-40">
+                        <div id="joyR-base" class="joy-base"><div id="joyR-stick" class="joy-stick snap w-14 h-14"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-black/40 p-1 text-center text-[10px] font-mono text-yellow-500">HEX: <span id="dualPacketHex">--</span></div>
+        </section>
+    </main>
+
+    <!-- МОДАЛЬНІ ВІКНА -->
+    
+    <!-- Налаштування кнопок -->
+    <div id="valueConfigModal" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 p-5 rounded-xl border border-slate-700 z-50 shadow-2xl">
+        <h3 class="text-white text-sm font-bold mb-2">Значення (0-255)</h3>
+        <input type="number" id="btnValInput" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white mb-3 text-center">
+        <div class="flex gap-2">
+            <button onclick="saveBtnConfig()" class="flex-1 bg-blue-600 text-white text-xs py-2 rounded">Зберегти</button>
+            <button onclick="document.getElementById('valueConfigModal').classList.add('hidden')" class="flex-1 bg-slate-700 text-white text-xs py-2 rounded">Скасувати</button>
+        </div>
+    </div>
+
+    <!-- Лог -->
+    <div id="logModal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 w-full max-w-sm h-[500px] rounded-2xl border border-slate-700 flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                <h3 class="text-sm font-bold text-yellow-500">LOG</h3>
+                <button onclick="toggleLogModal()" class="text-slate-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="logContainer" class="flex-1 overflow-y-auto p-4 space-y-1 bg-black/20 font-mono text-xs text-slate-300"></div>
+        </div>
+    </div>
+
+    <!-- Протокол -->
+    <div id="protocolModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center backdrop-blur-md p-4">
+        <div class="bg-slate-900 w-full max-w-sm h-[80vh] rounded-2xl shadow-2xl border border-slate-700 flex flex-col">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="font-bold text-white">Конструктор пакету</h3>
+                <button onclick="document.getElementById('protocolModal').classList.add('hidden')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="byteList" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+            <div class="p-4 border-t border-slate-800 flex gap-2">
+                <button onclick="addByte()" class="flex-1 bg-slate-800 text-blue-400 py-2 rounded-lg border border-dashed border-slate-600">Додати</button>
+                <button onclick="saveProtocol()" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg">ОК</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Структура Toolbox (Меню блоків) -->
+    <xml id="toolbox" style="display: none">
+        <block type="start_hat"></block>
+        <block type="go_home"></block>
+        
+        <category name="Машинка" colour="#4C97FF">
+            <block type="robot_move">
+                <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+            </block>
+            <!-- НОВИЙ БЛОК ДЛЯ 3-х МОТОРІВ -->
+            <block type="move_3_motors">
+                <value name="M1"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                <value name="M2"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                <value name="M3"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+            </block>
+            <block type="robot_stop"></block>
+        </category>
+        
+        <category name="Час" colour="#FFBF00"><block type="wait_seconds"></block></category>
+        <category name="Логіка" colour="%{BKY_LOGIC_HUE}"><block type="controls_if"></block><block type="logic_compare"></block></category>
+        <category name="Цикли" colour="%{BKY_LOOPS_HUE}"><block type="controls_repeat_ext"></block></category>
+        <category name="Числа" colour="%{BKY_MATH_HUE}"><block type="math_number"></block><block type="sensor_get"></block></category>
+    </xml>
+
+    <!-- Скрипти -->
+    <script>
+        // Базова логіка
+        let isConnected = false;
+        let device, characteristic;
+        let activeView = 'view-joystick';
+
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+            document.querySelectorAll('section').forEach(s => { s.classList.add('hidden'); s.classList.remove('opacity-100'); s.classList.add('opacity-0'); });
+            const target = document.getElementById(viewId);
+            target.classList.remove('hidden');
+            setTimeout(() => { target.classList.remove('opacity-0'); target.classList.add('opacity-100'); }, 10);
+            if(viewId === 'view-builder' && typeof Blockly !== 'undefined') {
+                setTimeout(() => Blockly.svgResize(workspace), 100);
+            }
+        }
+
+        function toggleLogModal() { document.getElementById('logModal').classList.toggle('hidden'); }
+        
+        function log(msg, type) { 
+            const d = document.createElement('div'); 
+            d.className = `border-b border-white/5 py-1 text-${type==='err'?'red-400':(type==='tx'?'blue-400':'green-400')}`; 
+            d.innerText = `> ${msg}`; 
+            document.getElementById('logContainer').appendChild(d); 
+        }
+
+        // Bluetooth
+        document.getElementById('btConnect').addEventListener('click', async () => {
+            if(isConnected) { if(device) device.gatt.disconnect(); return; }
+            try {
+                device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [0xFFE0] });
+                device.addEventListener('gattserverdisconnected', () => {
+                    isConnected = false; document.getElementById('statusDot').classList.remove('connected');
+                    document.getElementById('statusText').innerText = "OFFLINE";
+                    document.getElementById('btConnect').classList.remove('bg-red-600'); document.getElementById('btConnect').classList.add('bg-blue-600');
+                });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(0xFFE0);
+                characteristic = await service.getCharacteristic(0xFFE1);
+                isConnected = true;
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').innerText = "ONLINE";
+                document.getElementById('btConnect').classList.remove('bg-blue-600'); document.getElementById('btConnect').classList.add('bg-red-600');
+            } catch(e) { log(e, 'err'); }
+        });
+
+        // Глобальна відправка (використовується всіма файлами)
+        async function sendRawPacket(data) {
+            if (!isConnected || !characteristic) return;
+            try { await characteristic.writeValue(data); } catch(e) {}
+        }
+        
+        function startDualMode(btn) { switchView('view-dual', btn); }
+    </script>
+
+    <!-- Підключення модулів -->
+    <script src="joystick.js"></script>
+    <script src="dual_joystick.js"></script>
+    <script src="scratch/logic.js"></script>
+
+</body>
+</html>

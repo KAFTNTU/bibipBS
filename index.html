@@ -3,67 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RoboControl Ultimate</title>
+    <title>RoboControl Car Ultimate</title>
     
-    <!-- Стилі та іконки -->
+    <!-- Бібліотеки -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Бібліотека Blockly -->
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    
-    <!-- Наш стиль для Scratch -->
-    <link rel="stylesheet" href="scratch/style.css">
 
     <style>
-        body { overscroll-behavior: none; touch-action: none; user-select: none; font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: white; overflow: hidden; }
+        /* --- GLOBAL STYLES --- */
+        body {
+            overscroll-behavior: none;
+            touch-action: none;
+            user-select: none;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #0f172a;
+            color: white;
+            overflow: hidden; 
+        }
         
-        .glass-header { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.6); z-index: 50; }
+        .glass-header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
 
-        /* Джойстик (Загальні стилі) */
-        .joy-container { position: relative; width: 280px; height: 280px; margin: 0 auto; transition: opacity 0.3s; }
-        .joy-base { width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%); border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 50%; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); position: relative; }
-        .joy-stick { position: absolute; width: 90px; height: 90px; background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 5px 15px rgba(0,0,0,0.7); pointer-events: none; z-index: 10; }
-        .joy-stick.snap { transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        /* --- JOYSTICK (SINGLE) --- */
+        #joystick-container { position: relative; width: 280px; height: 280px; margin: 0 auto; }
+        #joystick-base {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        #joystick-stick {
+            position: absolute; width: 90px; height: 90px;
+            background: radial-gradient(circle at 30% 30%, #3b82f6, #1d4ed8);
+            border-radius: 50%;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.7);
+            cursor: grab; z-index: 10;
+            transition: transform 0.1s;
+        }
+        #joystick-stick.snap-back { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #joystick-stick::after {
+            content: ''; position: absolute; top: 20px; left: 20px; width: 25px; height: 25px;
+            background: rgba(255,255,255,0.2); border-radius: 50%;
+        }
 
-        /* Кнопки Dual Mode */
-        .trig-btn-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
-        .trig-btn { width: 60px; height: 60px; border-radius: 50%; background: #334155; border: 2px solid #475569; color: #94a3b8; font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
-        .trig-btn:active { background: #ef4444; border-color: #ef4444; color: white; transform: scale(0.95); }
-        .trig-val { margin-top: 4px; font-size: 10px; color: #94a3b8; font-family: monospace; background: #1e293b; padding: 2px 6px; border-radius: 4px; border: 1px solid #334155; cursor: pointer; }
+        .lock-btn { transition: all 0.3s; }
+        .lock-active { background-color: #ef4444 !important; box-shadow: 0 0 10px #ef4444; color: white !important; border-color: #ef4444 !important; }
 
-        /* Навігація */
-        .nav-btn { color: #64748b; padding: 8px 12px; border-radius: 8px; transition: all 0.2s; }
-        .nav-btn.active { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        /* --- SPEED SLIDER --- */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: #3b82f6; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(59,130,246,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px;
+        }
+
+        /* --- DUAL JOYSTICK STYLES --- */
+        .joy-dual-container { width: 140px; height: 140px; margin: 0 auto; }
+        .joy-dual-base {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 80%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+            position: relative;
+        }
+        .joy-dual-stick {
+            position: absolute; width: 50px; height: 50px;
+            background: radial-gradient(circle at 30% 30%, #a855f7, #7e22ce); /* Purple */
+            border-radius: 50%; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .joy-dual-stick.snap { transition: transform 0.2s; }
+
+        .trig-btn {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: #1e293b; border: 2px solid #334155;
+            color: #64748b; font-weight: bold; font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.1s; box-shadow: 0 4px 0 #0f172a;
+        }
+        .trig-btn:active { transform: translateY(4px); box-shadow: none; background: #7e22ce; border-color: #a855f7; color: white; }
+        .trig-val { 
+            margin-top: 8px; font-size: 10px; color: #94a3b8; font-family: monospace; 
+            background: #0f172a; padding: 2px 6px; border-radius: 6px; 
+            border: 1px solid #1e293b; cursor: pointer;
+        }
+
+        /* --- BLOCKLY CUSTOMIZATION --- */
+        #blocklyDiv { position: absolute; top: 64px; left: 0; right: 0; bottom: 0; background-color: #0f172a !important; }
+        .blocklySvg { background-color: transparent !important; }
+        
+        /* === МЕНЮ ЗНИЗУ ПО ЦЕНТРУ === */
+        .blocklyToolboxDiv { 
+            background-color: #1f2937 !important; /* ТЕМНИЙ ГРАФІТ (Gray 800) */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            
+            /* ЦЕНТРУВАННЯ */
+            position: absolute !important;
+            bottom: 30px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            top: auto !important;
+            
+            height: 64px !important;
+            width: fit-content !important; /* Ширина по вмісту */
+            min-width: 320px;
+            
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center;
+            justify-content: center;
+            
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            z-index: 40;
+            padding: 0 15px;
+        }
+        
+        /* Рядок категорії */
+        .blocklyTreeRow {
+            height: 48px !important;
+            padding: 0 20px !important;
+            margin: 0 4px !important;
+            border-radius: 10px !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+        }
+        .blocklyTreeRow:hover { background-color: rgba(255,255,255,0.1) !important; }
+        
+        /* Текст категорій */
+        .blocklyTreeLabel { 
+            color: #ffffff !important; /* Білий текст */
+            font-family: 'Segoe UI', sans-serif; 
+            font-weight: 700; 
+            font-size: 14px !important; 
+        }
+        
+        /* Активна категорія */
+        .blocklyTreeSelected .blocklyTreeRow { 
+            background-color: #3b82f6 !important; /* Яскравий синій */
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Фон випадаючого меню */
+        .blocklyFlyoutBackground { 
+            fill: #1f2937 !important; /* Такий же графітовий */
+            fill-opacity: 0.98 !important; 
+            stroke: rgba(255,255,255,0.1); 
+        }
+        
+        /* Ховаємо зайве */
+        .blocklyToolboxDiv::-webkit-scrollbar { display: none !important; }
+        .blocklyFlyoutScrollbar { display: none !important; }
+        .blocklyScrollbarHandle { display: none !important; }
+        .blocklyScrollbarBackground { display: none !important; }
+        .blocklyZoom { display: none !important; }
+
+        /* UI Elements */
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block; transition: all 0.3s;}
         .connected { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+        .nav-btn { color: #64748b; padding: 8px 12px; border-radius: 8px; transition: all 0.2s; }
+        .nav-btn:hover { background: rgba(255,255,255,0.05); color: #94a3b8; }
+        .nav-btn.active { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+        .log-line { font-family: 'Courier New', monospace; font-size: 11px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .log-tx { color: #60a5fa; } .log-rx { color: #34d399; } .log-err { color: #f87171; }
         
-        #loaderOverlay { backdrop-filter: blur(10px); background: rgba(15, 23, 42, 0.8); transition: opacity 0.5s; }
-        .spinner { width: 50px; height: 50px; border: 5px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .key-hint { 
+            display: inline-block; padding: 2px 6px; background: #334155; 
+            border-radius: 4px; font-family: monospace; font-size: 10px; color: #94a3b8; border-bottom: 2px solid #1e293b;
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col">
 
-    <!-- Лоадер -->
-    <div id="loaderOverlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center hidden opacity-0">
-        <div class="spinner mb-4"></div>
-        <div class="text-blue-400 font-bold tracking-widest text-sm animate-pulse">ЗАВАНТАЖЕННЯ...</div>
-    </div>
-
-    <!-- Хедер -->
-    <header class="h-16 glass-header flex items-center justify-between px-4 fixed top-0 w-full">
+    <!-- === HEADER === -->
+    <header class="h-16 glass-header flex items-center justify-between px-4 z-50 absolute top-0 w-full">
         <div class="flex items-center gap-2">
             <span id="statusDot" class="status-dot"></span>
             <span id="statusText" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden sm:block">OFFLINE</span>
         </div>
         
         <nav class="flex items-center gap-1 bg-slate-800/50 p-1 rounded-xl border border-slate-700/50">
-            <button onclick="switchView('view-joystick', this)" class="nav-btn active"><i class="fa-solid fa-gamepad text-lg"></i></button>
-            <button onclick="switchView('view-builder', this)" class="nav-btn"><i class="fa-solid fa-puzzle-piece text-lg"></i></button>
-            <button onclick="startDualMode(this)" class="nav-btn text-purple-400 hover:text-purple-300"><i class="fa-solid fa-gamepad text-lg"></i><i class="fa-solid fa-gamepad text-lg -ml-2 text-purple-600"></i></button>
+            <button onclick="switchView('view-joystick', this)" class="nav-btn active" title="Пульт">
+                <i class="fa-solid fa-gamepad text-lg"></i>
+            </button>
+            <button onclick="switchView('view-builder', this)" class="nav-btn" title="Блоки">
+                <i class="fa-solid fa-puzzle-piece text-lg"></i>
+            </button>
+            <button onclick="startDualMode(this)" class="nav-btn text-purple-400 hover:text-purple-300" title="Dual Mode">
+                <i class="fa-solid fa-gamepad text-lg"></i><i class="fa-solid fa-gamepad text-lg -ml-2 text-purple-600"></i>
+            </button>
             <div class="w-px h-6 bg-slate-700 mx-1"></div>
-            <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400"><i class="fa-solid fa-book text-lg"></i></button>
+            <button onclick="openPassModal()" class="nav-btn text-emerald-500/80 hover:text-emerald-400" title="Пароль">
+                <i class="fa-solid fa-lock text-lg"></i>
+            </button>
+            <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400" title="Лог">
+                <i class="fa-solid fa-book text-lg"></i>
+            </button>
         </nav>
         
         <button id="btConnect" class="w-10 h-10 rounded-full bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center transition-all border border-blue-400/30">
@@ -71,98 +227,148 @@
         </button>
     </header>
 
-    <!-- === ОСНОВНИЙ КОНТЕНТ === -->
+    <!-- === MAIN CONTENT === -->
     <main class="flex-1 relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-950 pt-16">
         
-        <!-- 1. ОДИН ДЖОЙСТИК -->
+        <!-- --- VIEW 1: JOYSTICK --- -->
         <section id="view-joystick" class="absolute inset-0 flex flex-col items-center justify-center p-4 transition-opacity duration-300">
-            <div id="joystick-container" class="joy-container mb-6 w-[280px] h-[280px]">
-                <div id="joy1-base" class="joy-base">
-                    <div id="joy1-stick" class="joy-stick snap"></div>
+            
+            <!-- Joystick -->
+            <div id="joystick-container" class="mb-2">
+                <div id="joystick-base">
+                    <div id="joystick-stick" class="snap-back"></div>
                 </div>
             </div>
             
-            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 w-64">
-                <div class="flex justify-between px-2 mb-2">
-                    <div class="text-xs font-mono text-slate-400">X: <span id="sX" class="text-blue-400 font-bold text-lg">0</span></div>
-                    <div class="text-xs font-mono text-slate-400">Y: <span id="sY" class="text-blue-400 font-bold text-lg">0</span></div>
+            <!-- Keyboard Hint -->
+            <div class="text-center mb-4 opacity-50 hidden md:block">
+                <span class="key-hint">W</span> <span class="key-hint">A</span> <span class="key-hint">S</span> <span class="key-hint">D</span> для руху
+            </div>
+
+            <!-- Controls Cluster -->
+            <div class="w-full max-w-xs flex flex-col gap-3 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/30 backdrop-blur-sm">
+                
+                <!-- Monitors -->
+                <div class="flex items-center justify-between gap-4">
+                    <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-center flex-1">
+                        <span class="text-[10px] text-green-500 font-bold mr-1">L</span>
+                        <span id="motorLDisplay" class="text-blue-400 font-mono font-bold">0</span>
+                    </div>
+                    
+                    <button id="lockJoyBtn" class="lock-btn w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center shadow-md border border-slate-600 hover:bg-slate-600 active:scale-95" onclick="toggleLock()" title="Зафіксувати газ">
+                        <i class="fa-solid fa-anchor text-sm"></i>
+                    </button>
+
+                    <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-center flex-1">
+                        <span class="text-[10px] text-green-500 font-bold mr-1">R</span>
+                        <span id="motorRDisplay" class="text-blue-400 font-mono font-bold">0</span>
+                    </div>
                 </div>
-                <div class="bg-black/40 p-1 rounded text-center border-t border-white/5">
-                    <span class="text-[10px] text-slate-500 font-bold mr-2">HEX:</span>
-                    <span id="singleHex" class="font-mono text-yellow-500 text-xs font-bold tracking-widest">00 00 0A</span>
+
+                <!-- Speed Slider -->
+                <div class="pt-2 border-t border-white/5">
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-1 uppercase tracking-wide">
+                        <span>Потужність</span>
+                        <span id="speedVal">100%</span>
+                    </div>
+                    <input type="range" id="speedSlider" min="10" max="100" value="100" step="10">
+                </div>
+
+                <!-- HEX Display -->
+                <div class="bg-black/40 px-3 py-1 rounded text-[10px] font-mono tracking-widest text-slate-400 border border-slate-800/50 text-center">
+                    HEX: <span id="joyHex" class="text-yellow-500 font-bold">00 00 0A</span>
                 </div>
             </div>
         </section>
 
-        <!-- 2. СКРЕТЧ (Blockly) -->
+
+        <!-- --- VIEW 2: BUILDER (SCRATCH) --- -->
         <section id="view-builder" class="absolute inset-0 flex flex-col hidden opacity-0 transition-opacity duration-300">
-            <div id="sensor-display-overlay">
-                <span class="sensor-label">S:</span>
-                <span id="sensorValDisplay" class="sensor-value">--</span>
+            
+            <div class="h-10 bg-slate-800/90 mt-2 mx-2 rounded-lg flex items-center justify-between px-4 border border-slate-700 z-10 shadow-lg absolute top-4 right-4 left-4 sm:left-auto sm:w-auto">
+                <span class="text-xs text-slate-400 font-bold"><i class="fa-solid fa-eye mr-2"></i>ДАТЧИК (S):</span>
+                <span id="sensorValDisplay" class="font-mono text-emerald-400 font-bold text-lg ml-2">--</span>
             </div>
-            <div id="blocklyDiv"></div>
+
+            <!-- Blockly Div -->
+            <div id="blocklyDiv" class="flex-1 mt-0"></div>
+
+            <div id="floatingControls" class="absolute bottom-[90px] right-6 flex gap-3 z-20 origin-bottom-right">
+                <button onclick="stopCode()" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-900/40 flex items-center justify-center border-2 border-red-400 transition-transform hover:scale-105 active:scale-95" title="Стоп">
+                    <i class="fa-solid fa-stop text-xl"></i>
+                </button>
+                <button onclick="runCode()" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white shadow-xl shadow-emerald-900/40 flex items-center justify-center border-4 border-emerald-300 animate-pulse-slow transition-transform hover:scale-105 active:scale-95" title="Запуск">
+                    <i class="fa-solid fa-play text-2xl pl-1"></i>
+                </button>
+            </div>
         </section>
 
-        <!-- 3. ДВА ДЖОЙСТИКИ (Dual) -->
-        <section id="view-dual" class="absolute inset-0 hidden opacity-0 flex flex-col">
-            <div class="h-8 bg-slate-900/50 flex justify-between items-center px-4 border-b border-white/5">
-                <span class="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Dual Mode</span>
-                <button onclick="openProtocolModal()" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-solid fa-gear"></i> Байты</button>
+        <!-- --- VIEW 3: DUAL MODE --- -->
+        <section id="view-dual" class="absolute inset-0 hidden opacity-0 flex flex-col items-center justify-center">
+             <div class="absolute top-0 w-full h-12 bg-slate-900/50 flex justify-between items-center px-6 border-b border-white/5 backdrop-blur-sm z-10">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+                    <span class="text-xs text-purple-400 font-bold tracking-[0.2em] uppercase">Dual Stick Mode</span>
+                </div>
+                <button onclick="openProtocolModal()" class="text-xs text-slate-400 hover:text-white flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700 hover:border-slate-500 transition-all">
+                    <i class="fa-solid fa-gear"></i> Налаштувати
+                </button>
             </div>
-            <div class="flex-1 flex items-center justify-around px-2 relative">
+
+            <div class="w-full flex justify-around items-center px-4 relative mt-10">
                 <!-- Left -->
                 <div class="flex flex-col items-center gap-6">
-                    <div class="trig-btn-wrapper">
+                    <div class="relative group">
                         <button id="btnL" class="trig-btn" onmousedown="setBtn('L', 1)" onmouseup="setBtn('L', 0)" ontouchstart="setBtn('L', 1)" ontouchend="setBtn('L', 0)">L</button>
-                        <div class="trig-val" onclick="configBtn('L')">val: <span id="valDispL">1</span></div>
+                         <div class="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] bg-slate-900 px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onclick="configBtn('L')">VAL: <span id="valDispL">1</span></div>
                     </div>
-                    <div id="joyL-container" class="joy-container w-40 h-40">
-                        <div id="joyL-base" class="joy-base"><div id="joyL-stick" class="joy-stick snap w-14 h-14"></div></div>
-                    </div>
+                    <div class="joy-dual-container"><div id="joyL-base" class="joy-dual-base"><div id="joyL-stick" class="joy-dual-stick snap"></div></div></div>
                 </div>
+
                 <!-- Right -->
                 <div class="flex flex-col items-center gap-6">
-                    <div class="trig-btn-wrapper">
+                    <div class="relative group">
                         <button id="btnR" class="trig-btn" onmousedown="setBtn('R', 1)" onmouseup="setBtn('R', 0)" ontouchstart="setBtn('R', 1)" ontouchend="setBtn('R', 0)">R</button>
-                        <div class="trig-val" onclick="configBtn('R')">val: <span id="valDispR">1</span></div>
+                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] bg-slate-900 px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onclick="configBtn('R')">VAL: <span id="valDispR">1</span></div>
                     </div>
-                    <div id="joyR-container" class="joy-container w-40 h-40">
-                        <div id="joyR-base" class="joy-base"><div id="joyR-stick" class="joy-stick snap w-14 h-14"></div></div>
-                    </div>
+                    <div class="joy-dual-container"><div id="joyR-base" class="joy-dual-base"><div id="joyR-stick" class="joy-dual-stick snap"></div></div></div>
                 </div>
             </div>
-            <div class="bg-black/40 p-1 text-center text-[10px] font-mono text-yellow-500">HEX: <span id="dualPacketHex">--</span></div>
+            <div class="mt-8 bg-black/40 px-4 py-2 rounded text-xs font-mono text-purple-400 border border-slate-800">
+                HEX: <span id="dualPacketHex">--</span>
+            </div>
         </section>
     </main>
 
-    <!-- МОДАЛЬНІ ВІКНА -->
-    
-    <!-- Налаштування кнопок -->
-    <div id="valueConfigModal" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 p-5 rounded-xl border border-slate-700 z-50 shadow-2xl">
+
+    <!-- === MODALS === -->
+    <div id="passModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center backdrop-blur-md p-4">
+        <div class="bg-slate-900 p-6 rounded-2xl w-full max-w-sm shadow-2xl border border-slate-700">
+            <h3 class="text-lg font-bold text-white mb-6 text-center tracking-wide">ДОСТУП</h3>
+            <div class="relative mb-6">
+                <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="text" id="passInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-4 text-white focus:border-blue-500 outline-none text-center text-xl tracking-[0.5em] font-mono" placeholder="****">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closePassModal()" class="py-3 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700">Скасувати</button>
+                <button onclick="sendPassword()" class="py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-900/50">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="valueConfigModal" class="hidden fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 p-5 rounded-xl border border-slate-700 z-50 shadow-2xl w-64">
         <h3 class="text-white text-sm font-bold mb-2">Значення (0-255)</h3>
         <input type="number" id="btnValInput" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white mb-3 text-center">
         <div class="flex gap-2">
-            <button onclick="saveBtnConfig()" class="flex-1 bg-blue-600 text-white text-xs py-2 rounded">Зберегти</button>
-            <button onclick="document.getElementById('valueConfigModal').classList.add('hidden')" class="flex-1 bg-slate-700 text-white text-xs py-2 rounded">Скасувати</button>
+            <button onclick="saveBtnConfig()" class="flex-1 bg-purple-600 text-white text-xs py-2 rounded">OK</button>
+            <button onclick="document.getElementById('valueConfigModal').classList.add('hidden')" class="flex-1 bg-slate-700 text-white text-xs py-2 rounded">X</button>
         </div>
     </div>
 
-    <!-- Лог -->
-    <div id="logModal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 w-full max-w-sm h-[500px] rounded-2xl border border-slate-700 flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b border-slate-800">
-                <h3 class="text-sm font-bold text-yellow-500">LOG</h3>
-                <button onclick="toggleLogModal()" class="text-slate-500"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="logContainer" class="flex-1 overflow-y-auto p-4 space-y-1 bg-black/20 font-mono text-xs text-slate-300"></div>
-        </div>
-    </div>
-
-    <!-- Протокол -->
-    <div id="protocolModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center backdrop-blur-md p-4">
+    <div id="protocolModal" class="fixed inset-0 bg-black/90 z-[70] hidden flex items-center justify-center backdrop-blur-md p-4">
         <div class="bg-slate-900 w-full max-w-sm h-[80vh] rounded-2xl shadow-2xl border border-slate-700 flex flex-col">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-                <h3 class="font-bold text-white">Конструктор пакету</h3>
+                <h3 class="font-bold text-white">Протокол Dual Mode</h3>
                 <button onclick="document.getElementById('protocolModal').classList.add('hidden')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="byteList" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
@@ -173,92 +379,534 @@
         </div>
     </div>
 
-    <!-- Структура Toolbox (Меню блоків) -->
+    <div id="logModal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-end sm:items-center justify-center backdrop-blur-sm sm:p-4">
+        <div class="bg-slate-900 w-full sm:max-w-md h-2/3 sm:h-[500px] sm:rounded-2xl rounded-t-2xl shadow-2xl border border-slate-700 flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                <h3 class="text-sm font-bold text-yellow-500 flex items-center gap-2"><i class="fa-solid fa-book"></i> СИСТЕМНИЙ ЛОГ</h3>
+                <div class="flex gap-2">
+                    <button onclick="clearLog()" class="text-slate-500 hover:text-white text-xs px-2"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="toggleLogModal()" class="text-slate-500 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div id="logContainer" class="flex-1 overflow-y-auto p-4 space-y-1 bg-black/20 font-mono text-xs">
+                <div class="text-slate-500 italic">-- Журнал подій --</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- XML Blocks (ІЗ ГОТОВИМИ ЗБІРКАМИ) -->
     <xml id="toolbox" style="display: none">
-        <block type="start_hat"></block>
-        <block type="go_home"></block>
-        
+        <category name="🌟 Готові збірки" colour="#fbbf24">
+            <block type="controls_repeat_ext">
+                <value name="TIMES"><shadow type="math_number"><field name="NUM">4</field></shadow></value>
+                <statement name="DO">
+                    <block type="robot_move">
+                        <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                        <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                        <next>
+                            <block type="wait_seconds">
+                                <field name="SECONDS">1</field>
+                                <next>
+                                    <block type="robot_move">
+                                        <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                        <value name="R"><shadow type="math_number"><field name="NUM">-100</field></shadow></value>
+                                        <next>
+                                            <block type="wait_seconds">
+                                                <field name="SECONDS">0.5</field>
+                                            </block>
+                                        </next>
+                                    </block>
+                                </next>
+                            </block>
+                        </next>
+                    </block>
+                </statement>
+            </block>
+            <block type="controls_repeat_ext">
+                <value name="TIMES"><shadow type="math_number"><field name="NUM">3</field></shadow></value>
+                <statement name="DO">
+                    <block type="robot_move">
+                        <value name="L"><shadow type="math_number"><field name="NUM">-100</field></shadow></value>
+                        <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                        <next>
+                            <block type="wait_seconds">
+                                <field name="SECONDS">0.5</field>
+                                <next>
+                                    <block type="robot_move">
+                                        <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                        <value name="R"><shadow type="math_number"><field name="NUM">-100</field></shadow></value>
+                                        <next>
+                                            <block type="wait_seconds">
+                                                <field name="SECONDS">0.5</field>
+                                            </block>
+                                        </next>
+                                    </block>
+                                </next>
+                            </block>
+                        </next>
+                    </block>
+                </statement>
+            </block>
+        </category>
         <category name="Машинка" colour="#4C97FF">
             <block type="robot_move">
                 <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
                 <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
             </block>
-            <!-- НОВИЙ БЛОК ДЛЯ 3-х МОТОРІВ -->
-            <block type="move_3_motors">
-                <value name="M1"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
-                <value name="M2"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
-                <value name="M3"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
-            </block>
+            <block type="move_3_motors"></block>
             <block type="robot_stop"></block>
         </category>
-        
-        <category name="Час" colour="#FFBF00"><block type="wait_seconds"></block></category>
-        <category name="Логіка" colour="%{BKY_LOGIC_HUE}"><block type="controls_if"></block><block type="logic_compare"></block></category>
-        <category name="Цикли" colour="%{BKY_LOOPS_HUE}"><block type="controls_repeat_ext"></block></category>
-        <category name="Числа" colour="%{BKY_MATH_HUE}"><block type="math_number"></block><block type="sensor_get"></block></category>
+        <category name="Логіка" colour="%{BKY_LOGIC_HUE}">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+        </category>
+        <category name="Цикли" colour="%{BKY_LOOPS_HUE}">
+            <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>
+            <block type="controls_whileUntil"></block>
+        </category>
+        <category name="Математика" colour="%{BKY_MATH_HUE}">
+            <block type="math_number"></block>
+            <block type="math_random_int"></block>
+            <block type="sensor_get"></block>
+        </category>
+        <category name="Час" colour="#FFBF00">
+            <block type="wait_seconds"><field name="SECONDS">1</field></block>
+            <block type="go_home"></block>
+        </category>
     </xml>
 
-    <!-- Скрипти -->
     <script>
-        // Базова логіка
+        // === GLOBAL STATE ===
         let isConnected = false;
         let device, characteristic;
+        let isLocked = false;
         let activeView = 'view-joystick';
+        
+        // Змінні для збереження стану моторів (використовуються джойстиком)
+        let currentL = 0;
+        let currentR = 0;
+        let speedMultiplier = 1.0; 
+        
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const btnConnect = document.getElementById('btConnect');
+        const motorLDisplay = document.getElementById('motorLDisplay');
+        const motorRDisplay = document.getElementById('motorRDisplay');
+        const joyHex = document.getElementById('joyHex');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedVal = document.getElementById('speedVal');
 
-        function switchView(viewId, btn) {
+        // === HEARTBEAT ===
+        setInterval(() => {
+            if (isConnected && activeView === 'view-joystick') {
+                sendMoveData(currentL, currentR);
+            }
+        }, 100);
+
+        // === LOGGING ===
+        function log(msg, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const el = document.createElement('div');
+            el.classList.add('log-line');
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            let prefix = '';
+            if(type === 'tx') { el.classList.add('log-tx'); prefix = 'TX -> '; }
+            else if(type === 'rx') { el.classList.add('log-rx'); prefix = 'RX <- '; }
+            else if(type === 'err') { el.classList.add('log-err'); prefix = 'ERR ! '; }
+            else { el.classList.add('text-slate-400'); prefix = 'SYS : '; }
+            el.innerText = `[${time}] ${prefix}${msg}`;
+            container.appendChild(el);
+            container.scrollTop = container.scrollHeight;
+        }
+        function clearLog() { document.getElementById('logContainer').innerHTML = '<div class="text-slate-500 italic">-- Лог очищено --</div>'; }
+        function toggleLogModal() { document.getElementById('logModal').classList.toggle('hidden'); }
+
+        // === BLUETOOTH CORE ===
+        async function sendMoveData(l, r) {
+            if (!isConnected || !characteristic) return;
+            l = Math.max(-100, Math.min(100, parseInt(l)));
+            r = Math.max(-100, Math.min(100, parseInt(r)));
+            try { await characteristic.writeValue(new Int8Array([l, r, 10])); } catch(e) { log(e, 'err'); }
+        }
+        
+        async function sendRawPacket(data) {
+             if (!isConnected || !characteristic) return;
+             try { await characteristic.writeValue(data); } catch(e) {}
+        }
+
+        async function sendTextData(str) {
+            if (!isConnected || !characteristic) return;
+            try { await characteristic.writeValue(new TextEncoder().encode(str + '\n')); log(`Cmd: ${str}`, 'tx'); } catch(e) { log(e, 'err'); }
+        }
+
+        btnConnect.addEventListener('click', async () => {
+            if(isConnected) { if(device) device.gatt.disconnect(); return; }
+            try {
+                log('Scanning...', 'info');
+                device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [0xFFE0, "6e400001-b5a3-f393-e0a9-e50e24dcca9e"]
+                });
+                device.addEventListener('gattserverdisconnected', () => {
+                    isConnected = false; statusDot.classList.remove('connected'); statusText.innerText = "OFFLINE";
+                    btnConnect.classList.remove('bg-red-600'); btnConnect.classList.add('bg-blue-600');
+                    log('Disconnected', 'err');
+                });
+                const server = await device.gatt.connect();
+                let service;
+                try { service = await server.getPrimaryService(0xFFE0); characteristic = await service.getCharacteristic(0xFFE1); } 
+                catch(e) { service = await server.getPrimaryService("6e400001-b5a3-f393-e0a9-e50e24dcca9e"); characteristic = await service.getCharacteristic("6e400002-b5a3-f393-e0a9-e50e24dcca9e"); }
+
+                try {
+                    await characteristic.startNotifications();
+                    characteristic.addEventListener('characteristicvaluechanged', (e) => {
+                        const str = new TextDecoder().decode(e.target.value).trim();
+                        log(str, 'rx');
+                        let val = parseFloat(str.replace('S:', ''));
+                        if(!isNaN(val)) { window.sensorVal = val; document.getElementById('sensorValDisplay').innerText = val; }
+                    });
+                } catch(e){}
+
+                isConnected = true; statusDot.classList.add('connected'); statusText.innerText = "ONLINE";
+                btnConnect.classList.remove('bg-blue-600'); btnConnect.classList.add('bg-red-600');
+                log('Connected!', 'info');
+            } catch(e) { log(e, 'err'); }
+        });
+        
+        // Navigation Logic
+        function switchView(viewId, btnElement) {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-            document.querySelectorAll('section').forEach(s => { s.classList.add('hidden'); s.classList.remove('opacity-100'); s.classList.add('opacity-0'); });
+            if(btnElement) btnElement.classList.add('active');
+            
+            ['view-joystick', 'view-builder', 'view-dual'].forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.add('hidden');
+                el.classList.remove('opacity-100');
+                el.classList.add('opacity-0');
+            });
+            
             const target = document.getElementById(viewId);
             target.classList.remove('hidden');
             setTimeout(() => { target.classList.remove('opacity-0'); target.classList.add('opacity-100'); }, 10);
+            
+            activeView = viewId;
             if(viewId === 'view-builder' && typeof Blockly !== 'undefined') {
                 setTimeout(() => Blockly.svgResize(workspace), 100);
             }
         }
-
-        function toggleLogModal() { document.getElementById('logModal').classList.toggle('hidden'); }
-        
-        function log(msg, type) { 
-            const d = document.createElement('div'); 
-            d.className = `border-b border-white/5 py-1 text-${type==='err'?'red-400':(type==='tx'?'blue-400':'green-400')}`; 
-            d.innerText = `> ${msg}`; 
-            document.getElementById('logContainer').appendChild(d); 
-        }
-
-        // Bluetooth
-        document.getElementById('btConnect').addEventListener('click', async () => {
-            if(isConnected) { if(device) device.gatt.disconnect(); return; }
-            try {
-                device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [0xFFE0] });
-                device.addEventListener('gattserverdisconnected', () => {
-                    isConnected = false; document.getElementById('statusDot').classList.remove('connected');
-                    document.getElementById('statusText').innerText = "OFFLINE";
-                    document.getElementById('btConnect').classList.remove('bg-red-600'); document.getElementById('btConnect').classList.add('bg-blue-600');
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(0xFFE0);
-                characteristic = await service.getCharacteristic(0xFFE1);
-                isConnected = true;
-                document.getElementById('statusDot').classList.add('connected');
-                document.getElementById('statusText').innerText = "ONLINE";
-                document.getElementById('btConnect').classList.remove('bg-blue-600'); document.getElementById('btConnect').classList.add('bg-red-600');
-            } catch(e) { log(e, 'err'); }
-        });
-
-        // Глобальна відправка (використовується всіма файлами)
-        async function sendRawPacket(data) {
-            if (!isConnected || !characteristic) return;
-            try { await characteristic.writeValue(data); } catch(e) {}
-        }
         
         function startDualMode(btn) { switchView('view-dual', btn); }
-    </script>
+        
+        // Pass Modal
+        function openPassModal() { document.getElementById('passModal').classList.remove('hidden'); }
+        function closePassModal() { document.getElementById('passModal').classList.add('hidden'); }
+        function sendPassword() {
+            const pass = document.getElementById('passInput').value;
+            if (pass) {
+                sendTextData(`PASS:${pass}`);
+                log(`Password sent: ****`, 'tx');
+                document.getElementById('passInput').value = '';
+                closePassModal();
+            }
+        }
 
-    <!-- Підключення модулів -->
-    <script src="joystick.js"></script>
-    <script src="dual_joystick.js"></script>
-    <script src="scratch/logic.js"></script>
+        // === JOYSTICK LOGIC ===
+        const stick = document.getElementById('joystick-stick');
+        const base = document.getElementById('joystick-base');
+        const lockBtn = document.getElementById('lockJoyBtn');
+        let dragging = false;
+        let joyCenter = { x: 0, y: 0 };
+        const maxDist = 90;
+
+        // SPEED SLIDER
+        speedSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            speedVal.innerText = val + '%';
+            speedMultiplier = val / 100;
+        });
+
+        // KEYBOARD
+        const keys = { w: false, a: false, s: false, d: false };
+        document.addEventListener('keydown', (e) => {
+            if(activeView !== 'view-joystick') return;
+            const key = e.key.toLowerCase();
+            if(keys.hasOwnProperty(key)) { keys[key] = true; updateKeyboardLogic(); }
+        });
+        document.addEventListener('keyup', (e) => {
+            if(activeView !== 'view-joystick') return;
+            const key = e.key.toLowerCase();
+            if(keys.hasOwnProperty(key)) { keys[key] = false; updateKeyboardLogic(); }
+        });
+
+        function updateKeyboardLogic() {
+            let x = 0, y = 0;
+            if (keys.w) y = 100; if (keys.s) y = -100;
+            if (keys.a) x = -100; if (keys.d) x = 100;
+            if (y !== 0 && x !== 0) x = x * 0.5;
+            updateTankLogic(x, y);
+        }
+
+        function toggleLock() {
+            isLocked = !isLocked;
+            if (isLocked) { lockBtn.classList.add('lock-active'); log('Joystick Locked', 'info'); } 
+            else { lockBtn.classList.remove('lock-active'); log('Joystick Unlocked', 'info'); resetJoystick(); }
+        }
+
+        function startJoy(e) {
+            if(activeView !== 'view-joystick') return;
+            dragging = true;
+            stick.classList.remove('snap-back');
+            const rect = base.getBoundingClientRect();
+            joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        }
+
+        function endJoy() {
+            if(activeView !== 'view-joystick') return;
+            dragging = false;
+            if (!isLocked) resetJoystick();
+        }
+
+        function resetJoystick() {
+            stick.classList.add('snap-back');
+            stick.style.transform = `translate(-50%, -50%)`;
+            updateTankLogic(0, 0);
+        }
+
+        function moveJoy(e) {
+            if (!dragging) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const dx = clientX - joyCenter.x;
+            const dy = clientY - joyCenter.y;
+            const dist = Math.min(Math.hypot(dx, dy), maxDist);
+            const angle = Math.atan2(dy, dx);
+            const moveX = Math.cos(angle) * dist;
+            const moveY = Math.sin(angle) * dist;
+            stick.style.transform = `translate(-50%, -50%) translate(${moveX}px, ${moveY}px)`;
+            
+            const valX = Math.round((moveX / maxDist) * 100);
+            const valY = Math.round((moveY / maxDist) * 100) * -1;
+            updateTankLogic(valX, valY);
+        }
+        
+        function updateTankLogic(valX, valY) {
+            let vL = valY + valX;
+            let vR = valY - valX;
+            vL = Math.max(-100, Math.min(100, vL));
+            vR = Math.max(-100, Math.min(100, vR));
+            vL = Math.round(vL * speedMultiplier);
+            vR = Math.round(vR * speedMultiplier);
+            currentL = vL; currentR = vR;
+            updateDisplay(vL, vR);
+        }
+
+        function updateDisplay(l, r) {
+            motorLDisplay.innerText = l;
+            motorRDisplay.innerText = r;
+            const hL = (l & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+            const hR = (r & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+            joyHex.innerText = `${hL} ${hR} 0A`;
+        }
+
+        base.addEventListener('mousedown', startJoy);
+        base.addEventListener('touchstart', startJoy);
+        window.addEventListener('mouseup', endJoy);
+        window.addEventListener('touchend', endJoy);
+        window.addEventListener('mousemove', moveJoy);
+        window.addEventListener('touchmove', moveJoy, { passive: false });
+
+        // === DUAL JOYSTICK LOGIC ===
+        const dualState = { lx: 0, ly: 0, rx: 0, ry: 0, btnL: 0, btnR: 0 };
+        let btnValues = { L: 1, R: 1 };
+        let protocol = [
+            { type: 'axis', src: 'lx' }, { type: 'axis', src: 'ly' },
+            { type: 'axis', src: 'rx' }, { type: 'axis', src: 'ry' },
+            { type: 'btn', src: 'btnL' }, { type: 'btn', src: 'btnR' },
+            { type: 'const', val: 10 }
+        ];
+
+        function initDualJoystick(baseId, stickId, prefix) {
+            const base = document.getElementById(baseId);
+            const stick = document.getElementById(stickId);
+            const maxDist = 40;
+
+            function update(cx, cy) {
+                const rect = base.getBoundingClientRect();
+                const dx = cx - (rect.left + rect.width/2); const dy = cy - (rect.top + rect.height/2);
+                const dist = Math.min(Math.hypot(dx, dy), maxDist);
+                const angle = Math.atan2(dy, dx);
+                const mx = Math.cos(angle) * dist; const my = Math.sin(angle) * dist;
+                stick.style.transform = `translate(-50%, -50%) translate(${mx}px, ${my}px)`;
+                dualState[prefix+'x'] = Math.round((mx/maxDist)*100);
+                dualState[prefix+'y'] = Math.round((my/maxDist)*100)*-1;
+            }
+
+            base.addEventListener('touchmove', (e)=>{ e.preventDefault(); update(e.touches[0].clientX, e.touches[0].clientY); });
+            base.addEventListener('touchend', ()=>{ stick.classList.add('snap'); stick.style.transform = `translate(-50%, -50%)`; dualState[prefix+'x']=0; dualState[prefix+'y']=0; });
+            base.addEventListener('touchstart', ()=>{ stick.classList.remove('snap'); });
+            base.addEventListener('mousedown', (e)=>{
+                stick.classList.remove('snap'); update(e.clientX, e.clientY);
+                const mm = (ev)=>update(ev.clientX, ev.clientY);
+                const mu = ()=>{ window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); stick.classList.add('snap'); stick.style.transform = `translate(-50%, -50%)`; dualState[prefix+'x']=0; dualState[prefix+'y']=0; };
+                window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+            });
+        }
+
+        setTimeout(() => {
+            initDualJoystick('joyL-base', 'joyL-stick', 'l');
+            initDualJoystick('joyR-base', 'joyR-stick', 'r');
+        }, 500);
+
+        function setBtn(side, pressed) {
+            if(pressed && navigator.vibrate) navigator.vibrate(20);
+            dualState['btn'+side] = pressed ? btnValues[side] : 0;
+        }
+
+        let currentCfgBtn = null;
+        function configBtn(side) {
+            currentCfgBtn = side;
+            document.getElementById('btnValInput').value = btnValues[side];
+            document.getElementById('valueConfigModal').classList.remove('hidden');
+        }
+        function saveBtnConfig() {
+            const val = parseInt(document.getElementById('btnValInput').value);
+            if(!isNaN(val) && val >= 0 && val <= 255) {
+                btnValues[currentCfgBtn] = val;
+                document.getElementById('valDisp'+currentCfgBtn).innerText = val;
+            }
+            document.getElementById('valueConfigModal').classList.add('hidden');
+        }
+
+        function openProtocolModal() { renderProtocolList(); document.getElementById('protocolModal').classList.remove('hidden'); }
+        function renderProtocolList() {
+            const list = document.getElementById('byteList'); list.innerHTML = '';
+            protocol.forEach((item, index) => {
+                const el = document.createElement('div'); el.className = 'flex justify-between items-center bg-slate-800 p-2 rounded mb-2 border border-slate-600';
+                let options = `<select onchange="updateByte(${index}, 'type', this.value)" class="bg-slate-900 text-xs rounded p-1 text-white"><option value="axis" ${item.type==='axis'?'selected':''}>Вісь</option><option value="btn" ${item.type==='btn'?'selected':''}>Кнопка</option><option value="const" ${item.type==='const'?'selected':''}>Конст</option></select>`;
+                let valInp = item.type === 'const' ? `<input type="number" value="${item.val}" onchange="updateByte(${index}, 'val', this.value)" class="w-12 bg-slate-900 text-xs text-center rounded text-white">` : `<select onchange="updateByte(${index}, 'src', this.value)" class="w-16 bg-slate-900 text-xs rounded text-white"><option value="lx" ${item.src==='lx'?'selected':''}>LX</option><option value="ly" ${item.src==='ly'?'selected':''}>LY</option><option value="rx" ${item.src==='rx'?'selected':''}>RX</option><option value="ry" ${item.src==='ry'?'selected':''}>RY</option><option value="btnL" ${item.src==='btnL'?'selected':''}>BtnL</option><option value="btnR" ${item.src==='btnR'?'selected':''}>BtnR</option></select>`;
+                el.innerHTML = `<span class="text-xs text-slate-400 font-mono">B${index}</span>${options}${valInp}<button onclick="removeByte(${index})" class="text-red-500"><i class="fa-solid fa-trash"></i></button>`;
+                list.appendChild(el);
+            });
+        }
+        function updateByte(i, k, v) { protocol[i][k] = k==='val'?parseInt(v):v; if(k==='type') renderProtocolList(); }
+        function addByte() { protocol.push({ type: 'const', val: 0 }); renderProtocolList(); }
+        function removeByte(i) { protocol.splice(i, 1); renderProtocolList(); }
+        function saveProtocol() { document.getElementById('protocolModal').classList.add('hidden'); }
+
+        setInterval(() => {
+            if(activeView === 'view-dual') {
+                const packet = new Int8Array(protocol.length);
+                let hexStr = "";
+                protocol.forEach((byteCfg, i) => {
+                    let val = 0;
+                    if(byteCfg.type === 'axis') val = dualState[byteCfg.src];
+                    else if(byteCfg.type === 'btn') val = dualState[byteCfg.src];
+                    else if(byteCfg.type === 'const') val = byteCfg.val;
+                    packet[i] = val;
+                    hexStr += (val & 0xFF).toString(16).toUpperCase().padStart(2, '0') + " ";
+                });
+                document.getElementById('dualPacketHex').innerText = hexStr;
+                if(isConnected) sendRawPacket(packet);
+            }
+        }, 100);
+
+        // === SCRATCH / BLOCKLY LOGIC ===
+        // 1. INIT
+        var workspace = Blockly.inject('blocklyDiv', {
+            toolbox: document.getElementById('toolbox'),
+            theme: Blockly.Themes.Dark,
+            renderer: 'zelos',
+            horizontalLayout: true,
+            toolboxPosition: 'end',
+            grid: { spacing: 30, length: 3, colour: '#475569', snap: true },
+            zoom: { controls: false, wheel: true, startScale: 0.9, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
+            trashcan: true,
+            move: { scrollbars: false, drag: true, wheel: true }
+        });
+
+        // 2. BLOCKS
+        Blockly.Blocks['start_hat'] = {
+            init: function() {
+                this.appendDummyInput().appendField("🏁 СТАРТ").appendField(new Blockly.FieldImage("https://upload.wikimedia.org/wikipedia/commons/2/21/Play_icon_green.svg", 24, 24, "Play", this.onRunClick.bind(this)), "RUN_ICON");
+                this.setNextStatement(true); this.setColour(120); this.isRunning = false;
+            },
+            onRunClick: function(img) {
+                if(this.sourceBlock_.isRunning) { stopCode(); img.setValue("https://upload.wikimedia.org/wikipedia/commons/2/21/Play_icon_green.svg"); this.sourceBlock_.isRunning = false; }
+                else { runCode(); img.setValue("https://upload.wikimedia.org/wikipedia/commons/4/47/Stop_icon_red.svg"); this.sourceBlock_.isRunning = true; }
+            }
+        };
+        javascript.javascriptGenerator.forBlock['start_hat'] = function(block) { return ''; };
+
+        Blockly.Blocks['robot_move'] = {
+            init: function() { this.appendDummyInput().appendField("🚗 Їхати").appendField("L").appendField(new Blockly.FieldTextInput("100"), "L").appendField("R").appendField(new Blockly.FieldTextInput("100"), "R"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(230); }
+        };
+        javascript.javascriptGenerator.forBlock['robot_move'] = function(block) {
+            var l = block.getFieldValue('L'); var r = block.getFieldValue('R');
+            return `recordMove(${l}, ${r}); await bt_move(${l}, ${r});\n`;
+        };
+
+        Blockly.Blocks['move_3_motors'] = {
+            init: function() { this.appendDummyInput().appendField("🚀 3 Мотори").appendField("M1").appendField(new Blockly.FieldTextInput("100"), "M1").appendField("M2").appendField(new Blockly.FieldTextInput("100"), "M2").appendField("M3").appendField(new Blockly.FieldTextInput("100"), "M3"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(260); }
+        };
+        javascript.javascriptGenerator.forBlock['move_3_motors'] = function(block) {
+            var m1 = block.getFieldValue('M1'); var m2 = block.getFieldValue('M2'); var m3 = block.getFieldValue('M3');
+            return `await bt_move3(${m1}, ${m2}, ${m3});\n`;
+        };
+
+        Blockly.Blocks['robot_stop'] = { init: function() { this.appendDummyInput().appendField("🛑 Стоп"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(0); } };
+        javascript.javascriptGenerator.forBlock['robot_stop'] = function() { return `recordMove(0,0); await bt_move(0,0);\n`; };
+
+        Blockly.Blocks['wait_seconds'] = { init: function() { this.appendDummyInput().appendField("⏳ Чекати").appendField(new Blockly.FieldTextInput("1"), "S"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(40); } };
+        javascript.javascriptGenerator.forBlock['wait_seconds'] = function(block) { const s = block.getFieldValue('S'); return `recordWait(${s}); await new Promise(r => setTimeout(r, ${s*1000}));\n`; };
+
+        Blockly.Blocks['sensor_get'] = { init: function() { this.appendDummyInput().appendField("👁️ Датчик"); this.setOutput(true, "Number"); this.setColour(180); } };
+        javascript.javascriptGenerator.forBlock['sensor_get'] = function() { return ['window.sensorVal', javascript.Order.ATOMIC]; };
+
+        Blockly.Blocks['go_home'] = { init: function() { this.appendDummyInput().appendField("🏠 Додому (Назад)"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(290); } };
+        javascript.javascriptGenerator.forBlock['go_home'] = function() { return 'await goHomeSequence();\n'; };
+
+        // 3. EXECUTION ENGINE
+        let moveHistory = []; 
+        let isCodeRunning = false;
+
+        function recordMove(l, r) { if(isCodeRunning) moveHistory.push({ type: 'move', l: parseInt(l), r: parseInt(r) }); }
+        function recordWait(sec) { if(isCodeRunning) moveHistory.push({ type: 'wait', sec: parseFloat(sec) }); }
+
+        async function goHomeSequence() {
+            for (let i = moveHistory.length - 1; i >= 0; i--) {
+                const action = moveHistory[i];
+                if (action.type === 'wait') await new Promise(r => setTimeout(r, action.sec * 1000));
+                else if (action.type === 'move') await bt_move(-action.l, -action.r);
+            }
+            await bt_move(0, 0); moveHistory = [];
+        }
+
+        async function bt_move(l, r) {
+            if(typeof isConnected !== 'undefined' && isConnected) {
+                let bL = Math.max(-100, Math.min(100, parseInt(l)));
+                let bR = Math.max(-100, Math.min(100, parseInt(r)));
+                try { await sendRawPacket(new Int8Array([bL, bR, 10])); } catch(e){}
+            }
+        }
+
+        async function bt_move3(m1, m2, m3) {
+            if(typeof isConnected !== 'undefined' && isConnected) {
+                try { await sendRawPacket(new Int8Array([parseInt(m1), parseInt(m2), parseInt(m3), 10])); } catch(e){}
+            }
+        }
+
+        window.runCode = async function() {
+            if(typeof isConnected !== 'undefined' && !isConnected) { alert('Спочатку підключіться до Bluetooth!'); return; }
+            moveHistory = []; isCodeRunning = true;
+            const code = javascript.javascriptGenerator.workspaceToCode(workspace);
+            try { const runner = new Function(`return (async () => { ${code} })();`); await runner(); } catch(e) { console.error(e); }
+            isCodeRunning = false;
+        };
+
+        window.stopCode = function() { bt_move(0,0); isCodeRunning = false; };
+    </script>
 
 </body>
 </html>

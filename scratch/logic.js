@@ -1,3 +1,45 @@
+// --- 0. ЯДЕРНИЙ CSS (FORCE INJECTION) ---
+// Ми додаємо стилі прямо з JS, щоб перебити будь-які старі кешовані файли
+const style = document.createElement('style');
+style.innerHTML = `
+    /* Примусові стилі для меню */
+    .blocklyToolboxDiv { 
+        background-color: rgba(2, 6, 23, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+        border-radius: 16px !important;
+        z-index: 9999 !important;
+        
+        /* СТАРТОВА ПОЗИЦІЯ ПО ЦЕНТРУ */
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        
+        margin: 0 !important;
+        width: 180px !important;
+        min-width: 140px !important;
+        max-height: 70vh !important;
+        padding-top: 32px !important;
+    }
+    
+    .blocklyTreeLabel { color: #cbd5e1 !important; font-family: sans-serif !important; font-weight: 600 !important; }
+    .blocklyTreeRow:hover { background-color: rgba(255, 255, 255, 0.1) !important; }
+    .blocklyTreeSelected .blocklyTreeRow { background-color: #2563eb !important; border-left: 4px solid #60a5fa !important; }
+    .blocklyFlyoutBackground { fill: #020617 !important; fill-opacity: 0.95 !important; }
+    
+    /* Ручки керування */
+    #toolbox-drag-handle {
+        position: absolute; top: 0; left: 0; right: 0; height: 32px;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+        cursor: grab; z-index: 10000; border-radius: 16px 16px 0 0;
+    }
+    #toolbox-drag-handle::after { content: ''; position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 40px; height: 4px; background: #64748b; border-radius: 2px; }
+    #toolbox-resize-handle { position: absolute; top: 0; right: 0; bottom: 0; width: 16px; cursor: col-resize; z-index: 10000; }
+`;
+document.head.appendChild(style);
+
 // --- 1. BLOCKLY INIT ---
 var workspace = Blockly.inject('blocklyDiv', {
     toolbox: document.getElementById('toolbox'),
@@ -7,139 +49,65 @@ var workspace = Blockly.inject('blocklyDiv', {
     trashcan: false
 });
 
-// --- 2. TOOLBOX FORCE POSITIONING (JS CONTROL) ---
+// --- 2. TOOLBOX LOGIC ---
 setTimeout(() => {
     const toolbox = document.querySelector('.blocklyToolboxDiv');
-    
-    if (!toolbox) {
-        console.warn('Toolbox not found!');
-        return;
-    }
+    if(toolbox) {
+        // Додаємо ручки керування
+        toolbox.insertAdjacentHTML('afterbegin', `<div id="toolbox-drag-handle"></div><div id="toolbox-resize-handle"></div>`);
 
-    // 🔥 ПРИМУСОВЕ модальне позиціонування через JS (перебиває стилі Blockly)
-    toolbox.style.position = 'absolute';
-    toolbox.style.left = '50%';
-    toolbox.style.top = '50%';
-    toolbox.style.transform = 'translate(-50%, -50%)';
-    toolbox.style.margin = '0';
-    toolbox.style.zIndex = '1000';
-    toolbox.style.height = 'auto'; // Скидаємо фіксовану висоту, якщо є
-    toolbox.style.maxHeight = '80vh'; // Обмежуємо висоту екраном
+        // --- DRAG LOGIC ---
+        let dragging = false; let offsetX, offsetY; let firstDrag = true;
+        const handle = document.getElementById('toolbox-drag-handle');
 
-    // Додаємо HTML для ручок керування
-    toolbox.insertAdjacentHTML('afterbegin', `
-        <div id="toolbox-drag-handle"></div>
-        <div id="toolbox-resize-handle"></div>
-    `);
+        const onDown = (cx, cy) => {
+            dragging = true;
+            if(firstDrag) {
+                // Фіксуємо позицію і знімаємо центрування
+                const r = toolbox.getBoundingClientRect();
+                toolbox.style.left = r.left + 'px';
+                toolbox.style.top = r.top + 'px';
+                toolbox.style.transform = 'none';
+                firstDrag = false;
+            }
+            offsetX = cx - toolbox.getBoundingClientRect().left;
+            offsetY = cy - toolbox.getBoundingClientRect().top;
+        };
 
-    // Запускаємо логіку інтерактивності
-    initToolboxDrag(toolbox);
-    initToolboxResize(toolbox);
+        const onMove = (cx, cy) => {
+            if(!dragging) return;
+            toolbox.style.left = (cx - offsetX) + 'px';
+            toolbox.style.top = (cy - offsetY) + 'px';
+        };
 
-}, 100); // 100ms затримки достатньо для рендеру Blockly
+        const onUp = () => { dragging = false; };
 
-// --- ФУНКЦІЇ ПЕРЕТЯГУВАННЯ ---
-
-function initToolboxDrag(toolbox) {
-    const handle = document.getElementById('toolbox-drag-handle');
-    let dragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-    let firstDrag = true; // Прапорець: чи це перший рух?
-
-    const startDrag = (clientX, clientY) => {
-        dragging = true;
-
-        // 🔥 КЛЮЧОВИЙ МОМЕНТ: перехід від % до px
-        if (firstDrag) {
-            const rect = toolbox.getBoundingClientRect();
-            // Фіксуємо поточні координати в пікселях
-            toolbox.style.left = rect.left + 'px';
-            toolbox.style.top = rect.top + 'px';
-            toolbox.style.transform = 'none'; // Прибираємо центрування
-            firstDrag = false;
-        }
-
-        // Рахуємо зсув курсору відносно кута вікна
-        offsetX = clientX - toolbox.getBoundingClientRect().left;
-        offsetY = clientY - toolbox.getBoundingClientRect().top;
+        handle.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onUp);
         
-        document.body.style.userSelect = 'none';
-    };
+        handle.addEventListener('touchstart', (e) => { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY); });
+        window.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX, e.touches[0].clientY));
+        window.addEventListener('touchend', onUp);
 
-    const doDrag = (clientX, clientY) => {
-        if (!dragging) return;
+        // --- RESIZE LOGIC ---
+        let resizing = false;
+        const resizer = document.getElementById('toolbox-resize-handle');
+        
+        const startRes = (e) => { resizing = true; e.stopPropagation(); };
+        const doRes = (cx) => { if(resizing) toolbox.style.width = Math.max(140, cx - toolbox.getBoundingClientRect().left) + 'px'; };
+        const stopRes = () => { if(resizing) { resizing = false; Blockly.svgResize(workspace); } };
 
-        let newLeft = clientX - offsetX;
-        let newTop = clientY - offsetY;
+        resizer.addEventListener('mousedown', startRes);
+        window.addEventListener('mousemove', (e)=>doRes(e.clientX));
+        window.addEventListener('mouseup', stopRes);
+        resizer.addEventListener('touchstart', startRes);
+        window.addEventListener('touchmove', (e)=>doRes(e.touches[0].clientX));
+        window.addEventListener('touchend', stopRes);
+    }
+}, 200);
 
-        // Обмеження екраном
-        newLeft = Math.max(0, Math.min(window.innerWidth - 50, newLeft));
-        newTop = Math.max(0, Math.min(window.innerHeight - 50, newTop));
-
-        toolbox.style.left = newLeft + 'px';
-        toolbox.style.top  = newTop + 'px';
-    };
-
-    const stopDrag = () => {
-        dragging = false;
-        document.body.style.userSelect = '';
-    };
-
-    // Мишка
-    handle.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
-    document.addEventListener('mousemove', (e) => doDrag(e.clientX, e.clientY));
-    document.addEventListener('mouseup', stopDrag);
-
-    // Тачскрін
-    handle.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY); });
-    document.addEventListener('touchmove', (e) => doDrag(e.touches[0].clientX, e.touches[0].clientY));
-    document.addEventListener('touchend', stopDrag);
-}
-
-// --- ФУНКЦІЇ ЗМІНИ РОЗМІРУ ---
-
-function initToolboxResize(toolbox) {
-    const handle = document.getElementById('toolbox-resize-handle');
-    let resizing = false;
-
-    const startResize = (e) => {
-        resizing = true;
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    const doResize = (clientX) => {
-        if (!resizing) return;
-        const newWidth = clientX - toolbox.getBoundingClientRect().left;
-        toolbox.style.width = Math.max(140, Math.min(500, newWidth)) + 'px';
-    };
-
-    const stopResize = () => {
-        if (resizing) {
-            resizing = false;
-            // Перемальовуємо Blockly
-            Blockly.svgResize(workspace);
-            // 🔥 ФІКС ЗНИКНЕННЯ: Примусово показуємо, якщо Blockly сховав
-            toolbox.style.display = 'block';
-        }
-    };
-
-    // Мишка
-    handle.addEventListener('mousedown', startResize);
-    document.addEventListener('mousemove', (e) => doResize(e.clientX));
-    document.addEventListener('mouseup', stopResize);
-
-    // Тачскрін
-    handle.addEventListener('touchstart', startResize);
-    document.addEventListener('touchmove', (e) => doResize(e.touches[0].clientX));
-    document.addEventListener('touchend', stopResize);
-}
-
-
-// --- БЛОКИ ТА ЛОГІКА (Стандартна) ---
-
-// 1. START HAT
+// --- BLOCKS ---
 Blockly.Blocks['start_hat'] = {
     init: function() {
         this.appendDummyInput().appendField("🏁 СТАРТ").appendField(new Blockly.FieldImage("https://upload.wikimedia.org/wikipedia/commons/2/21/Play_icon_green.svg", 24, 24, "Play", this.onRunClick.bind(this)), "RUN_ICON");
@@ -155,26 +123,21 @@ Blockly.Blocks['start_hat'] = {
 };
 javascript.javascriptGenerator.forBlock['start_hat'] = function(block) { return ''; };
 
-// 2. GO HOME
 Blockly.Blocks['go_home'] = { init: function() { this.appendDummyInput().appendField("🏠 ДОДОМУ (Назад)"); this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(290); } };
 javascript.javascriptGenerator.forBlock['go_home'] = function(block) { return 'await goHomeSequence();\n'; };
 
-// 3. MOVE
 Blockly.Blocks['robot_move'] = { init: function() { this.appendDummyInput().appendField("🚗 Їхати").appendField("L").appendField(new Blockly.FieldTextInput("100"), "L").appendField("R").appendField(new Blockly.FieldTextInput("100"), "R"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(230); } };
 javascript.javascriptGenerator.forBlock['robot_move'] = function(block, generator) {
     var l = block.getFieldValue('L'); var r = block.getFieldValue('R');
     return `recordMove(${l}, ${r}); await bt_move(${l}, ${r});\n`;
 };
 
-// 4. STOP
 Blockly.Blocks['robot_stop'] = { init: function() { this.appendDummyInput().appendField("🛑 Стоп"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(0); } };
 javascript.javascriptGenerator.forBlock['robot_stop'] = function(block, generator) { return `recordMove(0,0); await bt_move(0, 0);\n`; };
 
-// 5. WAIT
 Blockly.Blocks['wait_seconds'] = { init: function() { this.appendDummyInput().appendField("⏳ Чекати").appendField(new Blockly.FieldTextInput("1"), "SECONDS"); this.setPreviousStatement(true); this.setNextStatement(true); this.setColour(40); } };
 javascript.javascriptGenerator.forBlock['wait_seconds'] = function(block, generator) { const sec = block.getFieldValue('SECONDS'); return `recordWait(${sec}); await new Promise(r => setTimeout(r, ${sec*1000}));\n`; };
 
-// 6. 3 MOTORS
 Blockly.Blocks['move_3_motors'] = {
     init: function() {
         this.appendDummyInput().appendField("🚀 3 Мотори")

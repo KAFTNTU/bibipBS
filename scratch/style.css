@@ -1,39 +1,119 @@
-#blocklyDiv { height: 100%; width: 100%; }
-.blocklySvg { background-color: transparent !important; }
-
-/* Меню блоків (Темна тема) */
-.blocklyToolboxDiv { 
-    background-color: #020408 !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.6);
-    margin-top: 64px; 
-    height: calc(100% - 80px) !important;
-    position: absolute !important; left: 0; top: 0;
-    border-radius: 0 12px 12px 0;
-    padding-top: 24px;
+/* --- Глобальні налаштування --- */
+#blocklyDiv { 
+    height: 100%; 
+    width: 100%; 
+    position: relative; 
 }
 
-.blocklyTreeLabel { color: #94a3b8 !important; font-family: 'Segoe UI', sans-serif; font-weight: 600; font-size: 11px !important; }
-.blocklyTreeRow:hover { background-color: rgba(255, 255, 255, 0.05) !important; }
+.blocklySvg { 
+    background-color: transparent !important; 
+}
+
+/* --- ПЛАВАЮЧЕ МЕНЮ (Toolbox) --- */
+.blocklyToolboxDiv { 
+    background-color: rgba(15, 23, 42, 0.95) !important; /* Напівпрозорий темний */
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    
+    /* Розміри та позиція */
+    width: 160px;          /* Стартова ширина */
+    height: auto !important;
+    max-height: 80% !important; /* Щоб не вилазило за екран */
+    
+    /* Початкова позиція (плаваюча) */
+    position: absolute !important;
+    left: 20px !important; 
+    top: 20px !important;
+    
+    border-radius: 16px; /* Закруглені кути */
+    padding-top: 30px;   /* Місце під шапку */
+    padding-bottom: 10px;
+    z-index: 100;        /* Поверх усього */
+    
+    /* Скрол всередині меню, якщо блоків багато */
+    overflow-y: auto !important; 
+    scrollbar-width: none; /* Firefox */
+}
+
+/* Приховати скролбар */
+.blocklyToolboxDiv::-webkit-scrollbar { display: none; }
+
+/* Текст категорій */
+.blocklyTreeLabel { 
+    color: #cbd5e1 !important; 
+    font-family: 'Segoe UI', sans-serif; 
+    font-weight: 600; 
+    font-size: 12px !important; 
+}
+
+/* Рядок категорії */
+.blocklyTreeRow {
+    height: 40px !important;
+    line-height: 40px !important;
+    padding-left: 15px !important;
+    margin: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.blocklyTreeRow:hover { background-color: rgba(255, 255, 255, 0.1) !important; }
+
+.blocklyTreeSelected .blocklyTreeRow { 
+    background-color: #3b82f6 !important; 
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 .blocklyFlyoutBackground { fill: #0f172a !important; fill-opacity: 0.95; }
 .blocklyZoom, .blocklyTrash, .blocklyScrollbarHandle, .blocklyScrollbarBackground { display: none !important; }
 
-/* Елементи керування меню */
+/* --- ШАПКА ДЛЯ ПЕРЕТЯГУВАННЯ (Drag Handle) --- */
 #toolbox-drag-handle {
-    position: absolute; top: 0; left: 0; right: 0; height: 24px;
-    background: #1e293b; cursor: move; z-index: 1001;
-    display: flex; justify-content: center; align-items: center;
-    border-radius: 0 12px 0 0; border-bottom: 1px solid #334155;
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    height: 28px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(255,255,255,0));
+    cursor: grab; 
+    z-index: 1001;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-#toolbox-drag-handle::after { content: '::::'; color: #64748b; font-size: 10px; letter-spacing: 2px; }
-#toolbox-resize-handle { position: absolute; top: 0; right: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 1000; }
+
+#toolbox-drag-handle:active { cursor: grabbing; }
+
+/* Іконка "три крапки" на шапці */
+#toolbox-drag-handle::after { 
+    content: ''; 
+    width: 40px; 
+    height: 4px; 
+    background-color: #475569; 
+    border-radius: 2px; 
+}
+
+/* --- Смужка зміни ширини (Resize Handle) --- */
+#toolbox-resize-handle { 
+    position: absolute; 
+    top: 0; 
+    right: 0; 
+    bottom: 0; 
+    width: 15px; 
+    cursor: col-resize; 
+    z-index: 1000; 
+}
 
 /* Сенсор */
 #sensor-display-overlay {
-    position: absolute; top: 8px; right: 8px;
-    background: rgba(30, 41, 59, 0.8); padding: 4px 12px;
-    border-radius: 8px; border: 1px solid #334155;
+    position: absolute; top: 16px; right: 16px;
+    background: rgba(15, 23, 42, 0.9); padding: 6px 14px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
     z-index: 10; pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
-.sensor-label { font-size: 10px; color: #94a3b8; font-weight: bold; margin-right: 4px; }
-.sensor-value { font-family: monospace; color: #34d399; font-size: 14px; }
+.sensor-label { font-size: 11px; color: #94a3b8; font-weight: bold; margin-right: 6px; }
+.sensor-value { font-family: monospace; color: #34d399; font-size: 16px; font-weight: bold; }

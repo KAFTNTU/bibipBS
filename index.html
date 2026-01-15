@@ -214,9 +214,7 @@
             <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400" title="Лог">
                 <i class="fa-solid fa-book text-lg"></i>
             </button>
-            <button onclick="showGeneratedCode()" class="nav-btn text-blue-400 hover:text-blue-300" title="Код">
-                <i class="fa-solid fa-code text-lg"></i>
-            </button>
+            <!-- BUTTON REMOVED HERE -->
         </nav>
         
         <button id="btConnect" class="w-10 h-10 rounded-full bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center transition-all border border-blue-400/30">
@@ -1001,22 +999,10 @@
         Blockly.Blocks['start_hat'] = {
             init: function() {
                 this.appendDummyInput()
-                    .appendField("🏁 СТАРТ")
-                    .appendField(new Blockly.FieldImage("https://upload.wikimedia.org/wikipedia/commons/2/21/Play_icon_green.svg", 24, 24, "Play", this.onRunClick.bind(this)), "RUN_ICON");
+                    .appendField("🏁 СТАРТ");
+                    // REMOVED IMAGE FIELD HERE
                 this.setNextStatement(true);
                 this.setColour(120);
-                this.isRunning = false;
-            },
-            onRunClick: function(img) {
-                if(this.sourceBlock_.isRunning) {
-                    stopCode();
-                    img.setValue("https://upload.wikimedia.org/wikipedia/commons/2/21/Play_icon_green.svg");
-                    this.sourceBlock_.isRunning = false;
-                } else {
-                    runCode();
-                    img.setValue("https://upload.wikimedia.org/wikipedia/commons/4/47/Stop_icon_red.svg");
-                    this.sourceBlock_.isRunning = true;
-                }
             }
         };
         javascript.javascriptGenerator.forBlock['start_hat'] = function(block) { return ''; };

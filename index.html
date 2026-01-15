@@ -78,16 +78,16 @@
             border-radius: 50%;
             box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
             position: relative;
-            touch-action: none; /* Важливо для мультитачу */
+            touch-action: none;
         }
         .joy-dual-stick {
             position: absolute; width: 50px; height: 50px;
-            background: radial-gradient(circle at 30% 30%, #a855f7, #7e22ce); /* Purple */
+            background: radial-gradient(circle at 30% 30%, #a855f7, #7e22ce);
             border-radius: 50%; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             z-index: 10;
-            pointer-events: none; /* Щоб кліки проходили крізь стік на базу */
+            pointer-events: none;
         }
         .joy-dual-stick.snap { transition: transform 0.2s; }
 
@@ -99,38 +99,27 @@
             transition: all 0.1s; box-shadow: 0 4px 0 #0f172a;
         }
         .trig-btn:active { transform: translateY(4px); box-shadow: none; background: #7e22ce; border-color: #a855f7; color: white; }
-        .trig-val { 
-            margin-top: 8px; font-size: 10px; color: #94a3b8; font-family: monospace; 
-            background: #0f172a; padding: 2px 6px; border-radius: 6px; 
-            border: 1px solid #1e293b; cursor: pointer;
-        }
 
         /* --- BLOCKLY CUSTOMIZATION --- */
-        #blocklyDiv { position: absolute; top: 64px; left: 0; right: 0; bottom: 64px; background-color: #0f172a !important; }
+        #blocklyDiv { position: absolute; top: 64px; left: 0; right: 0; bottom: 64; background-color: #0f172a !important; }
         .blocklySvg { background-color: transparent !important; }
         
-        /* === МЕНЮ ЗНИЗУ ПО ЦЕНТРУ === */
+        /* ЦЕЙ КЛАС ТЕПЕР КЕРУЄТЬСЯ JS, АЛЕ ЗАЛИШАЄМО БАЗУ */
         .blocklyToolboxDiv { 
-            background-color: #1f2937 !important; /* ТЕМНИЙ ГРАФІТ */
             border: 1px solid rgba(255, 255, 255, 0.15);
-            
-            /* ЦЕНТРУВАННЯ ТА ВІДСТУП */
             position: absolute !important;
-            bottom: 40px !important; /* ПІДНЯВ ВИЩЕ ДЛЯ ТЕЛЕФОНІВ */
+            bottom: 40px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
             top: auto !important;
-            
             height: 64px !important;
             width: fit-content !important;
             min-width: 320px;
             max-width: 95vw;
-            
             display: flex !important;
             flex-direction: row !important;
             align-items: center;
             justify-content: center;
-            
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             z-index: 40;
@@ -148,30 +137,39 @@
             justify-content: center;
             border: 1px solid transparent;
         }
-        .blocklyTreeRow:hover { background-color: rgba(255,255,255,0.1) !important; }
         
         .blocklyTreeLabel { 
-            color: #ffffff !important; /* Білий текст */
             font-family: 'Segoe UI', sans-serif; 
             font-weight: 700; 
             font-size: 13px !important; 
         }
         
-        .blocklyTreeSelected .blocklyTreeRow { 
-            background-color: #3b82f6 !important; 
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-        .blocklyTreeSelected .blocklyTreeLabel { color: white !important; }
-        
-        .blocklyFlyoutBackground { 
-            fill: #1f2937 !important; /* Графітовий */
-            fill-opacity: 0.98 !important; 
-            stroke: rgba(255,255,255,0.1); 
-        }
-        
-        /* Прибираємо зайве */
         .blocklyToolboxDiv::-webkit-scrollbar { display: none !important; }
         .blocklyFlyoutScrollbar, .blocklyScrollbarHandle, .blocklyScrollbarBackground, .blocklyZoom { display: none !important; }
+
+        /* --- BIG RUN BUTTON --- */
+        .run-fab {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.1);
+            background: #22c55e;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 50;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .run-fab:active { transform: scale(0.9); }
+        .run-fab.running { background: #ef4444; animation: pulse-red 2s infinite; }
+        .run-fab i { font-size: 32px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
 
         /* UI Elements */
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block; transition: all 0.3s;}
@@ -215,6 +213,9 @@
             </button>
             <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400" title="Лог">
                 <i class="fa-solid fa-book text-lg"></i>
+            </button>
+            <button onclick="showGeneratedCode()" class="nav-btn text-blue-400 hover:text-blue-300" title="Код">
+                <i class="fa-solid fa-code text-lg"></i>
             </button>
         </nav>
         
@@ -289,7 +290,10 @@
             <!-- Blockly Div -->
             <div id="blocklyDiv" class="flex-1 mt-0"></div>
             
-            <!-- КНОПКИ ЗАПУСКУ ВИДАЛЕНІ, БО ТЕПЕР Є БЛОК "СТАРТ" -->
+            <!-- EXTERNAL START BUTTON -->
+            <button id="globalRunBtn" class="run-fab" onclick="toggleRunState()">
+                <i class="fa-solid fa-play ml-1" id="runIcon"></i>
+            </button>
         </section>
 
         <!-- --- VIEW 3: DUAL MODE --- -->
@@ -388,10 +392,22 @@
         </div>
     </div>
 
-    <!-- XML Blocks (ОНОВЛЕНО: СТАРТ БЛОК ТА ПРИКЛАДИ) -->
+     <!-- Code View Modal -->
+    <div id="codeModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-700 flex flex-col h-3/4">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                 <h3 class="text-blue-400 font-bold font-mono text-sm"><i class="fa-solid fa-code mr-2"></i>GENERATED JS</h3>
+                 <button onclick="document.getElementById('codeModal').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <pre id="codeDisplay" class="flex-1 overflow-auto p-4 bg-slate-950 text-xs font-mono text-emerald-400"></pre>
+        </div>
+    </div>
+
+
+    <!-- XML Blocks -->
     <xml id="toolbox" style="display: none">
         <category name="🌟 Готові збірки" colour="#fbbf24">
-            <!-- Збірка: Їзда квадратом -->
+            <!-- Збірка: Їзда квадратом (Square) -->
             <block type="start_hat">
                 <next>
                     <block type="controls_repeat_ext">
@@ -422,7 +438,8 @@
                     </block>
                 </next>
             </block>
-            <!-- Збірка: Змійка -->
+
+            <!-- Збірка: Змійка (Snake) -->
             <block type="start_hat">
                 <next>
                     <block type="controls_repeat_ext">
@@ -453,6 +470,71 @@
                     </block>
                 </next>
             </block>
+
+            <!-- Збірка: Розвідка (Scout) -->
+            <block type="start_hat">
+                <next>
+                    <block type="robot_move">
+                        <value name="L"><shadow type="math_number"><field name="NUM">80</field></shadow></value>
+                        <value name="R"><shadow type="math_number"><field name="NUM">80</field></shadow></value>
+                        <next>
+                            <block type="wait_seconds">
+                                <field name="SECONDS">2</field>
+                                <next>
+                                    <block type="robot_stop">
+                                        <next>
+                                            <block type="wait_seconds">
+                                                <field name="SECONDS">1</field>
+                                                <next>
+                                                    <block type="go_home"></block>
+                                                </next>
+                                            </block>
+                                        </next>
+                                    </block>
+                                </next>
+                            </block>
+                        </next>
+                    </block>
+                </next>
+            </block>
+
+            <!-- Збірка: 📦 Доставка вантажу (Delivery) -->
+            <block type="start_hat">
+                <next>
+                    <block type="robot_move">
+                        <value name="L"><shadow type="math_number"><field name="NUM">60</field></shadow></value>
+                        <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                        <next>
+                            <block type="wait_seconds">
+                                <field name="SECONDS">1.5</field>
+                                <next>
+                                    <block type="robot_move">
+                                        <value name="L"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                        <value name="R"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                        <next>
+                                            <block type="wait_seconds">
+                                                <field name="SECONDS">2</field>
+                                                <next>
+                                                    <block type="robot_stop">
+                                                        <next>
+                                                            <block type="wait_seconds">
+                                                                <field name="SECONDS">3</field>
+                                                                <next>
+                                                                    <block type="go_home"></block>
+                                                                </next>
+                                                            </block>
+                                                        </next>
+                                                    </block>
+                                                </next>
+                                            </block>
+                                        </next>
+                                    </block>
+                                </next>
+                            </block>
+                        </next>
+                    </block>
+                </next>
+            </block>
         </category>
         <category name="Машинка" colour="#4C97FF">
             <block type="start_hat"></block>
@@ -469,7 +551,7 @@
             <block type="logic_operation"></block>
         </category>
         <category name="Цикли" colour="%{BKY_LOOPS_HUE}">
-            <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value></block>
+            <block type="controls_repeat_ext"><value name="TIMES"><shadow type="math_number"><field name="NUM">4</field></shadow></value></block>
             <block type="controls_whileUntil"></block>
         </category>
         <category name="Математика" colour="%{BKY_MATH_HUE}">
@@ -484,6 +566,16 @@
     </xml>
 
     <script>
+        // === 🎨 НАЛАШТУВАННЯ КОЛЬОРІВ (ЗМІНЮЙ ТУТ) ===
+        // Щоб змінити колір, заміни код (наприклад, '#1e1e2e') на свій.
+        const THEME_CONFIG = {
+            menuBg: '#1f2937',      // Колір фону меню (зараз: темний графіт)
+            menuText: '#000000',    // Колір тексту
+            menuSelected: '#1f2937',// Колір виділення (синій)
+            flyoutBg: '#1f2937',    // Колір випадаючого вікна
+            flyoutOpacity: 0.95     // Прозорість (0-1)
+        };
+
         // === GLOBAL STATE ===
         let isConnected = false;
         let device, characteristic;
@@ -502,6 +594,7 @@
         const joyHex = document.getElementById('joyHex');
         const speedSlider = document.getElementById('speedSlider');
         const speedVal = document.getElementById('speedVal');
+        const codeDisplay = document.getElementById('codeDisplay');
 
         // === HEARTBEAT ===
         setInterval(() => {
@@ -864,9 +957,25 @@
 
         // === SCRATCH / BLOCKLY LOGIC ===
         // 1. INIT
+        // ВИЗНАЧЕННЯ ВЛАСНОЇ ТЕМИ
+        const CustomTheme = Blockly.Theme.defineTheme('myTheme', {
+            'base': Blockly.Themes.Classic,
+            'componentStyles': {
+                'workspaceBackgroundColour': '#0f172a',
+                'toolboxBackgroundColour': THEME_CONFIG.menuBg,
+                'toolboxForegroundColour': THEME_CONFIG.menuText,
+                'flyoutBackgroundColour': THEME_CONFIG.flyoutBg,
+                'flyoutForegroundColour': THEME_CONFIG.menuText,
+                'flyoutOpacity': THEME_CONFIG.flyoutOpacity,
+                'scrollbarColour': '#334155',
+                'insertionMarkerColour': '#fff',
+                'insertionMarkerOpacity': 0.3,
+            }
+        });
+
         var workspace = Blockly.inject('blocklyDiv', {
             toolbox: document.getElementById('toolbox'),
-            theme: Blockly.Themes.Dark,
+            theme: CustomTheme, // ВИКОРИСТОВУЄМО НАШУ ТЕМУ
             renderer: 'zelos',
             horizontalLayout: true,
             toolboxPosition: 'end',
@@ -875,6 +984,18 @@
             trashcan: true,
             move: { scrollbars: false, drag: true, wheel: true }
         });
+
+        // ПРИМУСОВЕ ЗАСТОСУВАННЯ СТИЛІВ, ЯКЩО БІБЛІОТЕКА ВЕРЕДУЄ
+        setTimeout(() => {
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .blocklyToolboxDiv { background-color: ${THEME_CONFIG.menuBg} !important; }
+                .blocklyFlyoutBackground { fill: ${THEME_CONFIG.flyoutBg} !important; fill-opacity: ${THEME_CONFIG.flyoutOpacity} !important; }
+                .blocklyTreeLabel { color: ${THEME_CONFIG.menuText} !important; }
+                .blocklyTreeSelected .blocklyTreeRow { background-color: ${THEME_CONFIG.menuSelected} !important; }
+            `;
+            document.head.appendChild(style);
+        }, 500);
 
         // 2. BLOCKS
         Blockly.Blocks['start_hat'] = {
@@ -961,15 +1082,57 @@
             }
         }
 
-        window.runCode = async function() {
-            if(typeof isConnected !== 'undefined' && !isConnected) { alert('Спочатку підключіться до Bluetooth!'); return; }
-            moveHistory = []; isCodeRunning = true;
-            const code = javascript.javascriptGenerator.workspaceToCode(workspace);
-            try { const runner = new Function(`return (async () => { ${code} })();`); await runner(); } catch(e) { console.error(e); }
-            isCodeRunning = false;
+        const runIcon = document.getElementById('runIcon');
+        const globalRunBtn = document.getElementById('globalRunBtn');
+
+        window.toggleRunState = function() {
+            if (isCodeRunning) {
+                stopCode();
+            } else {
+                runCode();
+            }
         };
 
-        window.stopCode = function() { bt_move(0,0); isCodeRunning = false; };
+        window.runCode = async function() {
+            if(typeof isConnected !== 'undefined' && !isConnected) { alert('Спочатку підключіться до Bluetooth!'); return; }
+            
+            isCodeRunning = true;
+            moveHistory = [];
+            
+            // UI Update
+            globalRunBtn.classList.add('running');
+            runIcon.classList.remove('fa-play');
+            runIcon.classList.add('fa-stop');
+            runIcon.classList.add('ml-0'); // fix centering
+
+            const code = javascript.javascriptGenerator.workspaceToCode(workspace);
+            try { 
+                const runner = new Function(`return (async () => { ${code} })();`); 
+                await runner(); 
+            } catch(e) { 
+                console.error(e); 
+            } finally {
+                // Ensure UI resets even if error or finish
+                if(isCodeRunning) stopCode(); // Call stop just to be safe/reset state
+            }
+        };
+
+        window.stopCode = function() { 
+            bt_move(0,0); 
+            isCodeRunning = false;
+            
+            // UI Reset
+            globalRunBtn.classList.remove('running');
+            runIcon.classList.remove('fa-stop');
+            runIcon.classList.add('fa-play');
+            runIcon.classList.remove('ml-0');
+        };
+
+        window.showGeneratedCode = function() {
+            const code = javascript.javascriptGenerator.workspaceToCode(workspace);
+            codeDisplay.textContent = code || "// No blocks in workspace";
+            document.getElementById('codeModal').classList.remove('hidden');
+        }
     </script>
 
 </body>

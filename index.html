@@ -33,7 +33,7 @@
             position: relative; 
             width: 280px; 
             height: 280px; 
-            margin: 0 auto 10vh auto; /* Підняли на 10% візуально */
+            margin: 0 auto 5vh auto; 
         }
         #joystick-base {
             width: 100%; height: 100%;
@@ -122,7 +122,6 @@
         #blocklyDiv { position: absolute; top: 64px; left: 0; right: 0; bottom: 64px; background-color: #0f172a !important; }
         .blocklySvg { background-color: transparent !important; }
         
-        /* ЦЕЙ КЛАС ТЕПЕР КЕРУЄТЬСЯ JS, АЛЕ ЗАЛИШАЄМО БАЗУ */
         .blocklyToolboxDiv { 
             border: 1px solid rgba(255, 255, 255, 0.15);
             position: absolute !important;
@@ -204,6 +203,20 @@
             display: inline-block; padding: 2px 6px; background: #334155; 
             border-radius: 4px; font-family: monospace; font-size: 10px; color: #94a3b8; border-bottom: 2px solid #1e293b;
         }
+
+        /* Checkbox Styles for Tuning */
+        .tune-check {
+             display: flex; align-items: center; justify-content: space-between;
+             background: #1e293b; padding: 10px; border-radius: 8px; border: 1px solid #334155;
+        }
+        .toggle-checkbox {
+            appearance: none; width: 40px; height: 20px; background: #334155; border-radius: 20px; position: relative; cursor: pointer; transition: 0.3s;
+        }
+        .toggle-checkbox::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-checkbox:checked { background: #3b82f6; }
+        .toggle-checkbox:checked::after { transform: translateX(20px); }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col">
@@ -260,14 +273,14 @@
             <!-- Controls Cluster -->
             <div class="w-full max-w-xs flex flex-col gap-3 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/30 backdrop-blur-sm">
                 
-                <!-- Monitors -->
+                <!-- Monitors & Gyro -->
                 <div class="flex items-center justify-between gap-4">
                     <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-center flex-1">
                         <span class="text-[10px] text-green-500 font-bold mr-1">L</span>
                         <span id="motorLDisplay" class="text-blue-400 font-mono font-bold">0</span>
                     </div>
                     
-                    <!-- GYRO BUTTON REPLACES LOCK BUTTON -->
+                    <!-- GYRO BUTTON -->
                     <button id="gyroBtn" class="lock-btn w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center shadow-md border border-slate-600 hover:bg-slate-600 active:scale-95" onclick="toggleGyro()" title="Гіроскоп">
                         <i class="fa-solid fa-mobile-screen-button text-sm"></i>
                     </button>
@@ -286,9 +299,14 @@
                     </div>
                     <input type="range" id="speedSlider" min="10" max="100" value="100" step="10">
                 </div>
+                
+                 <!-- Tuning Button -->
+                <button onclick="document.getElementById('tuningModal').classList.remove('hidden')" class="w-full py-2 mt-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-bold text-slate-300 border border-slate-600 transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> Налаштування моторів
+                </button>
 
                 <!-- HEX Display -->
-                <div class="bg-black/40 px-3 py-1 rounded text-[10px] font-mono tracking-widest text-slate-400 border border-slate-800/50 text-center">
+                <div class="bg-black/40 px-3 py-1 rounded text-[10px] font-mono tracking-widest text-slate-400 border border-slate-800/50 text-center mt-2">
                     HEX: <span id="joyHex" class="text-yellow-500 font-bold">00 00 0A</span>
                 </div>
             </div>
@@ -359,6 +377,42 @@
 
 
     <!-- === MODALS === -->
+    
+    <!-- Tuning Modal -->
+    <div id="tuningModal" class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center backdrop-blur-md p-4">
+        <div class="bg-slate-900 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-700 p-5">
+            <h3 class="text-lg font-bold text-white mb-4 text-center">⚙️ Налаштування шасі</h3>
+            
+            <div class="space-y-4">
+                <!-- Trim -->
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                    <div class="flex justify-between text-xs text-slate-400 mb-2">
+                        <span>L (Вліво)</span>
+                        <span class="font-bold text-white">БАЛАНС</span>
+                        <span>R (Вправо)</span>
+                    </div>
+                    <input type="range" id="trimSlider" min="-20" max="20" value="0" step="1" oninput="updateTrimDisplay(this.value)">
+                    <div class="text-center text-xs text-blue-400 font-mono mt-1" id="trimValueDisplay">0</div>
+                    <p class="text-[10px] text-slate-500 mt-1 text-center">Змістіть, якщо машинку заносить в бік</p>
+                </div>
+
+                <!-- Invert -->
+                <div class="space-y-2">
+                    <label class="tune-check">
+                        <span class="text-sm text-slate-300">Реверс Лівого (L)</span>
+                        <input type="checkbox" id="invLCheck" class="toggle-checkbox" onchange="saveTuning()">
+                    </label>
+                    <label class="tune-check">
+                        <span class="text-sm text-slate-300">Реверс Правого (R)</span>
+                        <input type="checkbox" id="invRCheck" class="toggle-checkbox" onchange="saveTuning()">
+                    </label>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('tuningModal').classList.add('hidden')" class="w-full mt-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg">Зберегти та закрити</button>
+        </div>
+    </div>
+
     <div id="passModal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center backdrop-blur-md p-4">
         <div class="bg-slate-900 p-6 rounded-2xl w-full max-w-sm shadow-2xl border border-slate-700">
             <h3 class="text-lg font-bold text-white mb-6 text-center tracking-wide">ДОСТУП</h3>
@@ -602,6 +656,21 @@
         let currentR = 0;
         let speedMultiplier = 1.0; 
         
+        // TUNING STATE
+        let tuning = { trim: 0, invertL: false, invertR: false };
+        // Load from LocalStorage
+        try {
+            const saved = localStorage.getItem('roboTuning');
+            if(saved) tuning = JSON.parse(saved);
+        } catch(e) {}
+        
+        // Init UI with saved values
+        document.getElementById('trimSlider').value = tuning.trim;
+        document.getElementById('trimValueDisplay').innerText = tuning.trim > 0 ? `R+${tuning.trim}` : (tuning.trim < 0 ? `L${tuning.trim}` : '0');
+        document.getElementById('invLCheck').checked = tuning.invertL;
+        document.getElementById('invRCheck').checked = tuning.invertR;
+
+
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const btnConnect = document.getElementById('btConnect');
@@ -611,6 +680,19 @@
         const speedSlider = document.getElementById('speedSlider');
         const speedVal = document.getElementById('speedVal');
         const codeDisplay = document.getElementById('codeDisplay');
+
+        function updateTrimDisplay(val) {
+            tuning.trim = parseInt(val);
+            document.getElementById('trimValueDisplay').innerText = tuning.trim > 0 ? `R+${tuning.trim}` : (tuning.trim < 0 ? `L${tuning.trim}` : '0');
+            saveTuning();
+        }
+
+        function saveTuning() {
+            tuning.trim = parseInt(document.getElementById('trimSlider').value);
+            tuning.invertL = document.getElementById('invLCheck').checked;
+            tuning.invertR = document.getElementById('invRCheck').checked;
+            localStorage.setItem('roboTuning', JSON.stringify(tuning));
+        }
 
         // === HEARTBEAT ===
         setInterval(() => {
@@ -917,6 +999,26 @@
         function updateTankLogic(valX, valY) {
             let vL = valY + valX;
             let vR = valY - valX;
+
+            // Apply Trim (Drift correction)
+            // Trim > 0 (Right): Decrease Left motor to turn Right? Or Decrease Right motor?
+            // "Car drifts Left" -> User moves slider Right (positive).
+            // This means we want to straighten the path by turning slightly Right.
+            // Turn Right = Left Motor > Right Motor.
+            // So we reduce the Right motor.
+            if (tuning.trim > 0) {
+                // vR needs to be less powerful
+                // Reduce by percentage: 20 max means 20% reduction
+                 vR = vR * (1 - (tuning.trim / 100));
+            } else if (tuning.trim < 0) {
+                // vL needs to be less powerful
+                vL = vL * (1 - (Math.abs(tuning.trim) / 100));
+            }
+
+            // Apply Inversion
+            if (tuning.invertL) vL = -vL;
+            if (tuning.invertR) vR = -vR;
+
             vL = Math.max(-100, Math.min(100, vL));
             vR = Math.max(-100, Math.min(100, vR));
             vL = Math.round(vL * speedMultiplier);

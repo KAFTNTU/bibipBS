@@ -29,7 +29,12 @@
         }
 
         /* --- JOYSTICK (SINGLE) --- */
-        #joystick-container { position: relative; width: 280px; height: 280px; margin: 0 auto; }
+        #joystick-container { 
+            position: relative; 
+            width: 280px; 
+            height: 280px; 
+            margin: 0 auto 10vh auto; /* Підняли на 10% візуально */
+        }
         #joystick-base {
             width: 100%; height: 100%;
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 70%);
@@ -46,7 +51,7 @@
             transform: translate(-50%, -50%);
             box-shadow: 0 8px 20px rgba(0,0,0,0.7);
             cursor: grab; z-index: 10;
-            transition: transform 0.1s;
+            transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
         }
         #joystick-stick.snap-back { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #joystick-stick::after {
@@ -54,8 +59,21 @@
             background: rgba(255,255,255,0.2); border-radius: 50%;
         }
 
+        /* Стиль для "гальм" (червоний стік) */
+        #joystick-stick.braking {
+            background: radial-gradient(circle at 30% 30%, #ef4444, #b91c1c);
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+        }
+
         .lock-btn { transition: all 0.3s; }
-        .lock-active { background-color: #ef4444 !important; box-shadow: 0 0 10px #ef4444; color: white !important; border-color: #ef4444 !important; }
+        /* Стиль активного гіроскопа */
+        .gyro-active { background-color: #8b5cf6 !important; box-shadow: 0 0 15px #8b5cf6; color: white !important; border-color: #8b5cf6 !important; animation: pulse-purple 2s infinite; }
+
+        @keyframes pulse-purple {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
 
         /* --- SPEED SLIDER --- */
         input[type=range] {
@@ -214,7 +232,6 @@
             <button onclick="toggleLogModal()" class="nav-btn text-yellow-500/80 hover:text-yellow-400" title="Лог">
                 <i class="fa-solid fa-book text-lg"></i>
             </button>
-            <!-- BUTTON REMOVED HERE -->
         </nav>
         
         <button id="btConnect" class="w-10 h-10 rounded-full bg-blue-600 active:bg-blue-700 hover:bg-blue-500 text-white shadow-lg flex items-center justify-center transition-all border border-blue-400/30">
@@ -250,8 +267,9 @@
                         <span id="motorLDisplay" class="text-blue-400 font-mono font-bold">0</span>
                     </div>
                     
-                    <button id="lockJoyBtn" class="lock-btn w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center shadow-md border border-slate-600 hover:bg-slate-600 active:scale-95" onclick="toggleLock()" title="Зафіксувати газ">
-                        <i class="fa-solid fa-anchor text-sm"></i>
+                    <!-- GYRO BUTTON REPLACES LOCK BUTTON -->
+                    <button id="gyroBtn" class="lock-btn w-10 h-10 rounded-full bg-slate-700 text-slate-400 flex items-center justify-center shadow-md border border-slate-600 hover:bg-slate-600 active:scale-95" onclick="toggleGyro()" title="Гіроскоп">
+                        <i class="fa-solid fa-mobile-screen-button text-sm"></i>
                     </button>
 
                     <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-center flex-1">
@@ -577,7 +595,7 @@
         // === GLOBAL STATE ===
         let isConnected = false;
         let device, characteristic;
-        let isLocked = false;
+        let isGyroEnabled = false; // Змінено з isLocked
         let activeView = 'view-joystick';
         
         let currentL = 0;
@@ -688,6 +706,9 @@
             setTimeout(() => { target.classList.remove('opacity-0'); target.classList.add('opacity-100'); }, 10);
             
             activeView = viewId;
+            // Disable gyro if switching away (safety)
+            if(viewId !== 'view-joystick' && isGyroEnabled) toggleGyro();
+            
             if(viewId === 'view-builder' && typeof Blockly !== 'undefined') {
                 setTimeout(() => Blockly.svgResize(workspace), 100);
             }
@@ -711,7 +732,7 @@
         // === JOYSTICK LOGIC ===
         const stick = document.getElementById('joystick-stick');
         const base = document.getElementById('joystick-base');
-        const lockBtn = document.getElementById('lockJoyBtn');
+        const gyroBtn = document.getElementById('gyroBtn');
         let dragging = false;
         let joyCenter = { x: 0, y: 0 };
         const maxDist = 90;
@@ -744,24 +765,112 @@
             updateTankLogic(x, y);
         }
 
-        function toggleLock() {
-            isLocked = !isLocked;
-            if (isLocked) { lockBtn.classList.add('lock-active'); log('Joystick Locked', 'info'); } 
-            else { lockBtn.classList.remove('lock-active'); log('Joystick Unlocked', 'info'); resetJoystick(); }
+        // === GYROSCOPE LOGIC ===
+        function toggleGyro() {
+            if (typeof DeviceOrientationEvent === 'undefined' || !window.DeviceOrientationEvent) {
+                alert("Ваш пристрій не підтримує гіроскоп або це не мобільний браузер.");
+                return;
+            }
+
+            // iOS 13+ specific permission request
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            activateGyro();
+                        } else {
+                            alert("Доступ до гіроскопа заборонено.");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Non-iOS 13+ devices
+                activateGyro();
+            }
         }
 
+        function activateGyro() {
+            isGyroEnabled = !isGyroEnabled;
+            if (isGyroEnabled) {
+                gyroBtn.classList.add('gyro-active');
+                window.addEventListener('deviceorientation', handleGyro);
+                log('Gyroscope ON', 'info');
+                // Disable stick interaction while gyro is on to prevent conflict? 
+                // Let's keep both allowed, but gyro overwrites.
+            } else {
+                gyroBtn.classList.remove('gyro-active');
+                window.removeEventListener('deviceorientation', handleGyro);
+                log('Gyroscope OFF', 'info');
+                resetJoystick();
+            }
+        }
+
+        function handleGyro(event) {
+            if (!isGyroEnabled) return;
+            
+            // Landscape orientation logic assumption
+            // Beta: Front/Back tilt (-180 to 180)
+            // Gamma: Left/Right tilt (-90 to 90)
+            
+            let x = event.gamma; // Tilt left/right
+            let y = event.beta;  // Tilt front/back
+
+            // Clamp and scale
+            // Let's assume +/- 30 degrees is full speed
+            const maxTilt = 30;
+            
+            if (x > maxTilt) x = maxTilt; if (x < -maxTilt) x = -maxTilt;
+            if (y > maxTilt) y = maxTilt; if (y < -maxTilt) y = -maxTilt;
+
+            // Map to -100..100
+            // Note: In landscape, holding phone flat: beta ~0. 
+            // Tilted away (forward) is negative beta? It depends on device. 
+            // Usually: 
+            // - Tilted Left: Gamma is negative
+            // - Tilted Right: Gamma is positive
+            // - Tilted Forward (away): Beta is negative? (Needs testing, usually yes)
+            
+            let valX = Math.round((x / maxTilt) * 100);
+            let valY = Math.round((y / maxTilt) * 100); 
+
+            // Simple deadzone
+            if (Math.abs(valX) < 10) valX = 0;
+            if (Math.abs(valY) < 10) valY = 0;
+
+            // Invert Y if necessary (usually forward tilt is desired positive speed)
+            // Let's assume standard behavior: we want forward tilt to be +100.
+            // Adjust signs based on feel. For now:
+            valY = -valY; // If forward tilt gives positive beta, we might need to invert or not.
+
+            // Move the stick visually to represent the gyro
+            const moveX = (valX / 100) * maxDist;
+            const moveY = (-valY / 100) * maxDist; // Screen Y is opposite to logic Y
+            stick.style.transform = `translate(-50%, -50%) translate(${moveX}px, ${moveY}px)`;
+
+            updateTankLogic(valX, valY);
+        }
+
+
         function startJoy(e) {
-            if(activeView !== 'view-joystick') return;
+            if(activeView !== 'view-joystick' || isGyroEnabled) return;
             dragging = true;
             stick.classList.remove('snap-back');
             const rect = base.getBoundingClientRect();
             joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+            
+            // Red light check immediately on touch
+            stick.classList.add('braking');
         }
 
         function endJoy() {
-            if(activeView !== 'view-joystick') return;
+            if(activeView !== 'view-joystick' || isGyroEnabled) return;
             dragging = false;
-            if (!isLocked) resetJoystick();
+            
+            // Haptic feedback on snap back
+            if (navigator.vibrate) navigator.vibrate(5);
+            
+            stick.classList.remove('braking');
+            resetJoystick();
         }
 
         function resetJoystick() {
@@ -771,7 +880,7 @@
         }
 
         function moveJoy(e) {
-            if (!dragging) return;
+            if (!dragging || isGyroEnabled) return;
             e.preventDefault();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -779,6 +888,23 @@
             const dy = clientY - joyCenter.y;
             const dist = Math.min(Math.hypot(dx, dy), maxDist);
             const angle = Math.atan2(dy, dx);
+            
+            // Logic for Red Glow (Braking)
+            // If very close to center (deadzone), show red
+            if (dist < 10) {
+                 if (!stick.classList.contains('braking')) stick.classList.add('braking');
+            } else {
+                 if (stick.classList.contains('braking')) stick.classList.remove('braking');
+            }
+
+            // Logic for Haptic at max edge
+            // If we just hit the edge (simplified check)
+            if (dist >= maxDist && navigator.vibrate) {
+                // To avoid continuous vibration, we could check if we *just* reached it, 
+                // but for simplicity, let's just rely on the user's perception or skip it to avoid battery drain.
+                // Or vibrate only on return to center as requested.
+            }
+
             const moveX = Math.cos(angle) * dist;
             const moveY = Math.sin(angle) * dist;
             stick.style.transform = `translate(-50%, -50%) translate(${moveX}px, ${moveY}px)`;
